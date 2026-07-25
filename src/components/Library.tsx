@@ -8,6 +8,7 @@ import DetailModal from "./DetailModal";
 import LoginModal from "./LoginModal";
 import ItemCard from "./ItemCard";
 import type { Item } from "@/lib/types";
+import { createClient } from "@/lib/supabase/client";
 
 export default function Library() {
   const [items, setItems] = useState<Item[]>([]);
@@ -27,15 +28,14 @@ export default function Library() {
     setLoading(false);
   }
 
-  async function loadAuth() {
-    const res = await fetch("/api/auth/me");
-    const json = await res.json();
-    setAuthed(Boolean(json.authed));
-  }
-
   useEffect(() => {
     load();
-    loadAuth();
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data }) => setAuthed(Boolean(data.user)));
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+      setAuthed(Boolean(session?.user));
+    });
+    return () => sub.subscription.unsubscribe();
   }, []);
 
   const allTags = useMemo(() => {
@@ -73,7 +73,8 @@ export default function Library() {
   }
 
   async function handleLogout() {
-    await fetch("/api/auth/logout", { method: "POST" });
+    const supabase = createClient();
+    await supabase.auth.signOut();
     setAuthed(false);
   }
 

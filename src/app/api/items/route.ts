@@ -5,7 +5,7 @@ import { tagImage } from "@/lib/tagging";
 import { captureScreenshot, extractDomain } from "@/lib/screenshot";
 import { detectTech } from "@/lib/techDetect";
 import { normalizeUrl } from "@/lib/normalizeUrl";
-import { isAuthed } from "@/lib/auth";
+import { getAuthedUser } from "@/lib/supabase/server";
 
 export async function GET(req: NextRequest) {
   const tag = req.nextUrl.searchParams.get("tag");
@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  if (!(await isAuthed())) {
+  if (!(await getAuthedUser())) {
     return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
   }
 

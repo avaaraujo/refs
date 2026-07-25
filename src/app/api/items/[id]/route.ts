@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { isAuthed } from "@/lib/auth";
+import { getAuthedUser } from "@/lib/supabase/server";
 
 export async function DELETE(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  if (!(await isAuthed())) {
+  if (!(await getAuthedUser())) {
     return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
   }
 
@@ -37,7 +37,7 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  if (!(await isAuthed())) {
+  if (!(await getAuthedUser())) {
     return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
   }
 

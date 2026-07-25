@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { X, Lock } from "@phosphor-icons/react/dist/ssr";
+import { createClient } from "@/lib/supabase/client";
 
 export default function LoginModal({
   open,
@@ -13,6 +14,7 @@ export default function LoginModal({
   onClose: () => void;
   onLoggedIn: () => void;
 }) {
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -22,12 +24,9 @@ export default function LoginModal({
     e.preventDefault();
     setLoading(true);
     try {
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password }),
-      });
-      if (!res.ok) throw new Error("Senha incorreta.");
+      const supabase = createClient();
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw new Error(error.message);
       setPassword("");
       onLoggedIn();
       onClose();
@@ -56,8 +55,18 @@ export default function LoginModal({
         </div>
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
           <input
-            type="password"
+            type="email"
             autoFocus
+            autoComplete="email"
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="rounded-xl border px-3 py-2 text-sm outline-none"
+            style={{ borderColor: "var(--border)", background: "transparent" }}
+          />
+          <input
+            type="password"
+            autoComplete="current-password"
             placeholder="Senha"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
@@ -66,7 +75,7 @@ export default function LoginModal({
           />
           <button
             type="submit"
-            disabled={loading || !password}
+            disabled={loading || !email || !password}
             className="rounded-xl px-4 py-2.5 text-sm font-medium text-white transition disabled:opacity-50"
             style={{ background: "var(--accent)" }}
           >
