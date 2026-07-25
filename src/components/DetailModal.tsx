@@ -110,7 +110,12 @@ export default function DetailModal({
       >
         <div className="hidden flex-1 items-start justify-center overflow-auto bg-black/5 sm:flex">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={publicImageUrl(item.image_path)} alt={item.title ?? ""} className="w-full object-cover" />
+          <img
+            src={publicImageUrl(item.image_path)}
+            alt={item.title ?? ""}
+            className="w-full object-cover"
+            style={{ viewTransitionName: "card-img" }}
+          />
         </div>
 
         <div className="scroll-thin flex w-full flex-col overflow-y-auto sm:w-[380px]">
@@ -121,7 +126,11 @@ export default function DetailModal({
                   {item.category}
                 </p>
               )}
-              <h2 id="detail-modal-title" className="font-title mt-1 text-lg leading-snug">
+              <h2
+                id="detail-modal-title"
+                className="font-title mt-1 text-lg leading-snug"
+                style={{ viewTransitionName: "card-title" }}
+              >
                 {item.title}
               </h2>
             </div>
@@ -132,7 +141,12 @@ export default function DetailModal({
 
           <div className="sm:hidden">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={publicImageUrl(item.image_path)} alt={item.title ?? ""} className="mt-3 w-full object-cover" />
+            <img
+              src={publicImageUrl(item.image_path)}
+              alt={item.title ?? ""}
+              className="mt-3 w-full object-cover"
+              style={{ viewTransitionName: "card-img" }}
+            />
           </div>
 
           <div className="flex-1 px-5 pb-5">

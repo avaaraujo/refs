@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { flushSync } from "react-dom";
 import { toast } from "sonner";
 import { Plus, MagnifyingGlass, X, Lock, LockOpen } from "@phosphor-icons/react/dist/ssr";
 import AddModal from "./AddModal";
@@ -76,6 +77,56 @@ export default function Library() {
     const supabase = createClient();
     await supabase.auth.signOut();
     setAuthed(false);
+  }
+
+  function canMorph() {
+    type VTDocument = Document & { startViewTransition?: (cb: () => void) => { finished: Promise<void> } };
+    const doc = document as VTDocument;
+    if (!doc.startViewTransition) return null;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return null;
+    return doc;
+  }
+
+  // morph card -> modal: assign o mesmo view-transition-name na imagem/título
+  // de origem ANTES do snapshot antigo, e limpa do card assim que o modal
+  // (que já nasce com o mesmo nome) entra — só um elemento pode ter o nome
+  // por vez, senão o browser rejeita a transição.
+  function handleOpenItem(item: Item) {
+    const doc = canMorph();
+    if (!doc) {
+      setActiveItem(item);
+      return;
+    }
+    const cardImg = document.querySelector<HTMLElement>(`[data-card-img="${item.id}"]`);
+    const cardTitle = document.querySelector<HTMLElement>(`[data-card-title="${item.id}"]`);
+    if (cardImg) cardImg.style.viewTransitionName = "card-img";
+    if (cardTitle) cardTitle.style.viewTransitionName = "card-title";
+    doc.startViewTransition(() => {
+      flushSync(() => setActiveItem(item));
+      if (cardImg) cardImg.style.viewTransitionName = "";
+      if (cardTitle) cardTitle.style.viewTransitionName = "";
+    });
+  }
+
+  function handleCloseDetail() {
+    const item = activeItem;
+    const doc = canMorph();
+    if (!item || !doc) {
+      setActiveItem(null);
+      return;
+    }
+    doc.startViewTransition(() => {
+      flushSync(() => setActiveItem(null));
+      const cardImg = document.querySelector<HTMLElement>(`[data-card-img="${item.id}"]`);
+      const cardTitle = document.querySelector<HTMLElement>(`[data-card-title="${item.id}"]`);
+      if (cardImg) cardImg.style.viewTransitionName = "card-img";
+      if (cardTitle) cardTitle.style.viewTransitionName = "card-title";
+    }).finished.finally(() => {
+      const cardImg = document.querySelector<HTMLElement>(`[data-card-img="${item.id}"]`);
+      const cardTitle = document.querySelector<HTMLElement>(`[data-card-title="${item.id}"]`);
+      if (cardImg) cardImg.style.viewTransitionName = "";
+      if (cardTitle) cardTitle.style.viewTransitionName = "";
+    });
   }
 
   return (
@@ -183,7 +234,7 @@ export default function Library() {
               authed={authed}
               onDelete={handleDelete}
               onTagClick={setActiveTag}
-              onOpen={setActiveItem}
+              onOpen={handleOpenItem}
             />
           ))}
         </div>
@@ -200,7 +251,7 @@ export default function Library() {
       <DetailModal
         item={activeItem}
         authed={authed}
-        onClose={() => setActiveItem(null)}
+        onClose={handleCloseDetail}
         onDelete={handleDelete}
         onUpdated={handleUpdated}
       />

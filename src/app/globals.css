@@ -83,3 +83,12 @@ a {
   background: var(--border);
   border-radius: 999px;
 }
+
+/* morph card -> modal de detalhe: desaceleração suave (ease-out-quint),
+   sem overshoot — bounce/elastic foi flagado pelo detector do impeccable
+   como algo que envelhece mal e não combina com objetos reais. */
+::view-transition-group(card-img),
+::view-transition-group(card-title) {
+  animation-duration: 0.32s;
+  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}

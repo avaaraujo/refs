@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Trash, ArrowSquareOut } from "@phosphor-icons/react/dist/ssr";
 import { publicImageUrl } from "@/lib/publicUrl";
 import type { Item } from "@/lib/types";
@@ -19,16 +19,45 @@ export default function ItemCard({
   onOpen: (item: Item) => void;
 }) {
   const [hover, setHover] = useState(false);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const rafRef = useRef<number | null>(null);
+
+  function handleMouseMove(e: React.MouseEvent<HTMLDivElement>) {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const el = cardRef.current;
+    if (!el) return;
+    const clientX = e.clientX;
+    const clientY = e.clientY;
+    if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+    rafRef.current = requestAnimationFrame(() => {
+      const r = el.getBoundingClientRect();
+      const x = (clientX - r.left) / r.width - 0.5;
+      const y = (clientY - r.top) / r.height - 0.5;
+      el.style.transform = `perspective(700px) rotateY(${(x * 8).toFixed(2)}deg) rotateX(${(-y * 8).toFixed(2)}deg) translateY(-2px)`;
+      rafRef.current = null;
+    });
+  }
+
+  function resetTilt() {
+    setHover(false);
+    if (rafRef.current !== null) {
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    }
+    if (cardRef.current) cardRef.current.style.transform = "";
+  }
 
   return (
     <div
+      ref={cardRef}
       role="button"
       tabIndex={0}
       aria-label={`Abrir referência: ${item.title ?? "sem título"}`}
-      className="group mb-4 break-inside-avoid cursor-pointer overflow-hidden rounded-xl border transition-[transform,box-shadow,border-color] duration-150 hover:-translate-y-0.5 hover:shadow-lg"
+      className="group mb-4 break-inside-avoid cursor-pointer overflow-hidden rounded-xl border transition-[transform,box-shadow,border-color] duration-150 will-change-transform hover:shadow-lg"
       style={{ borderColor: hover ? "var(--accent)" : "var(--border)", background: "var(--card)" }}
       onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={resetTilt}
       onClick={() => onOpen(item)}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
@@ -42,6 +71,7 @@ export default function ItemCard({
         <img
           src={publicImageUrl(item.image_path)}
           alt={item.title ?? "referência"}
+          data-card-img={item.id}
           className="w-full object-cover"
           loading="lazy"
         />
@@ -82,7 +112,9 @@ export default function ItemCard({
             {item.category}
           </p>
         )}
-        <p className="font-title text-sm leading-snug">{item.title}</p>
+        <p data-card-title={item.id} className="font-title text-sm leading-snug">
+          {item.title}
+        </p>
         {item.description && (
           <p className="mt-0.5 text-xs" style={{ color: "var(--muted)" }}>
             {item.description}
