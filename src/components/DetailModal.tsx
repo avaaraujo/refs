@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { X, ArrowSquareOut, Trash, Check } from "@phosphor-icons/react/dist/ssr";
+import { X, ArrowSquareOut, Trash, Check, ArrowClockwise } from "@phosphor-icons/react/dist/ssr";
 import { publicImageUrl } from "@/lib/publicUrl";
 import { timeAgo } from "@/lib/timeAgo";
 import type { Item } from "@/lib/types";
@@ -43,6 +43,8 @@ export default function DetailModal({
 }) {
   const [notes, setNotes] = useState(item?.notes ?? "");
   const [savingNotes, setSavingNotes] = useState(false);
+  const [recapturing, setRecapturing] = useState(false);
+  const [delay, setDelay] = useState(3);
 
   useEffect(() => {
     setNotes(item?.notes ?? "");
@@ -57,6 +59,25 @@ export default function DetailModal({
   }, [onClose]);
 
   if (!item) return null;
+
+  async function recapture() {
+    setRecapturing(true);
+    try {
+      const res = await fetch(`/api/items/${item!.id}/recapture`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ delay }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error);
+      onUpdated(json.item);
+      toast.success("Print e tags atualizados.");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Erro ao recapturar.");
+    } finally {
+      setRecapturing(false);
+    }
+  }
 
   async function saveNotes() {
     setSavingNotes(true);
@@ -192,6 +213,39 @@ export default function DetailModal({
               </Field>
             )}
           </div>
+
+          {authed && item.url && (
+            <div className="border-t p-4" style={{ borderColor: "var(--border)" }}>
+              <p className="mb-2 text-xs" style={{ color: "var(--muted)" }}>
+                Print saiu errado (ex: animação de entrada não terminou)? Recapture.
+              </p>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={recapture}
+                  disabled={recapturing}
+                  className="flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition hover:border-[var(--accent)] hover:text-[var(--accent)] disabled:opacity-50"
+                  style={{ borderColor: "var(--border)" }}
+                >
+                  <ArrowClockwise size={13} className={recapturing ? "animate-spin" : undefined} />
+                  {recapturing ? "Recapturando..." : "Recapturar"}
+                </button>
+                <label className="flex items-center gap-1.5 text-xs" style={{ color: "var(--muted)" }}>
+                  esperar
+                  <input
+                    type="number"
+                    min={0}
+                    max={15}
+                    value={delay}
+                    onChange={(e) => setDelay(Number(e.target.value))}
+                    disabled={recapturing}
+                    className="w-12 rounded-md border px-1.5 py-1 text-xs outline-none"
+                    style={{ borderColor: "var(--border)", background: "transparent" }}
+                  />
+                  s
+                </label>
+              </div>
+            </div>
+          )}
 
           {authed && (
             <div className="border-t p-4" style={{ borderColor: "var(--border)" }}>
