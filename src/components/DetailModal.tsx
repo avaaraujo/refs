@@ -118,7 +118,7 @@ export default function DetailModal({
                   {item.category}
                 </p>
               )}
-              <h2 className="mt-1 text-lg font-semibold leading-snug">{item.title}</h2>
+              <h2 className="font-title mt-1 text-lg leading-snug">{item.title}</h2>
             </div>
             <button onClick={onClose} aria-label="Fechar" className="shrink-0 opacity-60 hover:opacity-100">
               <X size={20} />

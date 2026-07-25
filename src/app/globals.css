@@ -1,28 +1,30 @@
 @import "tailwindcss";
 
+/* Paleta e tipografia espelham avaaraujo.com: fundo quase-preto,
+   texto creme-esverdeado, azul puro + verde-lima como accents. */
 :root {
-  --bg: #faf8f5;
-  --fg: #17140f;
-  --muted: #786c5e;
-  --border: #e7e2d9;
+  --bg: #f4f6ee;
+  --fg: #1a1a1a;
+  --muted: #6b6b60;
+  --border: #dee2d2;
   --card: #ffffff;
-  --accent: #c1502e;
-  --style: #386e94;
-  --tech: #347957;
-  --danger: #973526;
+  --accent: #0000ee;
+  --style: #5f7a1c;
+  --tech: #52627a;
+  --danger: #b23d2b;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #121110;
-    --fg: #f2ede4;
-    --muted: #8f897d;
-    --border: #2a2622;
-    --card: #1a1816;
-    --accent: #b95327;
-    --style: #5c97c1;
-    --tech: #57b787;
-    --danger: #d56858;
+    --bg: #1a1a1a;
+    --fg: #eefaeb;
+    --muted: #9a9a90;
+    --border: #333330;
+    --card: #232320;
+    --accent: #4d4dff;
+    --style: #a3d94b;
+    --tech: #d3e3b5;
+    --danger: #ff6b52;
   }
 }
 
@@ -39,7 +41,16 @@ body {
 }
 
 body {
-  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-family: var(--font-plex), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+.font-display {
+  font-family: var(--font-canela), Georgia, serif;
+}
+
+/* Título de card/modal — única weight (Light) do kit Vulf Sans licenciado. */
+.font-title {
+  font-family: var(--font-vulf), var(--font-plex), ui-sans-serif, system-ui, sans-serif;
 }
 
 a {

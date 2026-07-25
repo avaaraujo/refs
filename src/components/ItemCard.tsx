@@ -82,7 +82,7 @@ export default function ItemCard({
             {item.category}
           </p>
         )}
-        <p className="text-sm font-medium leading-snug">{item.title}</p>
+        <p className="font-title text-sm leading-snug">{item.title}</p>
         {item.description && (
           <p className="mt-0.5 text-xs" style={{ color: "var(--muted)" }}>
             {item.description}
