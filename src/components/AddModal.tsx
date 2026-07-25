@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { X, UploadSimple, LinkSimple } from "@phosphor-icons/react/dist/ssr";
 import type { Item } from "@/lib/types";
+import { normalizeUrl } from "@/lib/normalizeUrl";
 
 export default function AddModal({
   open,
@@ -46,7 +47,7 @@ export default function AddModal({
     try {
       const fd = new FormData();
       if (file) fd.append("file", file);
-      if (url.trim()) fd.append("url", url.trim());
+      if (url.trim()) fd.append("url", normalizeUrl(url));
       if (notes.trim()) fd.append("notes", notes.trim());
 
       const res = await fetch("/api/items", { method: "POST", body: fd });
@@ -118,8 +119,9 @@ export default function AddModal({
           <div className="flex items-center gap-2 rounded-xl border px-3 py-2" style={{ borderColor: "var(--border)" }}>
             <LinkSimple size={16} style={{ color: "var(--muted)" }} />
             <input
-              type="url"
-              placeholder="https://cole-o-link-aqui.com"
+              type="text"
+              inputMode="url"
+              placeholder="apple.com ou https://apple.com"
               value={url}
               onChange={(e) => setUrl(e.target.value)}
               className="flex-1 bg-transparent text-sm outline-none"

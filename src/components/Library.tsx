@@ -2,9 +2,10 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Plus, MagnifyingGlass, X } from "@phosphor-icons/react/dist/ssr";
+import { Plus, MagnifyingGlass, X, Lock, LockOpen } from "@phosphor-icons/react/dist/ssr";
 import AddModal from "./AddModal";
 import DetailModal from "./DetailModal";
+import LoginModal from "./LoginModal";
 import ItemCard from "./ItemCard";
 import type { Item } from "@/lib/types";
 
@@ -12,6 +13,8 @@ export default function Library() {
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
+  const [loginOpen, setLoginOpen] = useState(false);
+  const [authed, setAuthed] = useState(false);
   const [activeItem, setActiveItem] = useState<Item | null>(null);
   const [activeTag, setActiveTag] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -24,8 +27,15 @@ export default function Library() {
     setLoading(false);
   }
 
+  async function loadAuth() {
+    const res = await fetch("/api/auth/me");
+    const json = await res.json();
+    setAuthed(Boolean(json.authed));
+  }
+
   useEffect(() => {
     load();
+    loadAuth();
   }, []);
 
   const allTags = useMemo(() => {
@@ -62,6 +72,11 @@ export default function Library() {
     setActiveItem(updated);
   }
 
+  async function handleLogout() {
+    await fetch("/api/auth/logout", { method: "POST" });
+    setAuthed(false);
+  }
+
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
       <header className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -84,14 +99,36 @@ export default function Library() {
               className="w-40 bg-transparent text-sm outline-none sm:w-56"
             />
           </div>
-          <button
-            onClick={() => setModalOpen(true)}
-            className="flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-medium text-white"
-            style={{ background: "var(--accent)" }}
-          >
-            <Plus size={16} weight="bold" />
-            Adicionar
-          </button>
+          {authed ? (
+            <>
+              <button
+                onClick={() => setModalOpen(true)}
+                className="flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-medium text-white"
+                style={{ background: "var(--accent)" }}
+              >
+                <Plus size={16} weight="bold" />
+                Adicionar
+              </button>
+              <button
+                onClick={handleLogout}
+                aria-label="Sair"
+                className="rounded-xl border p-2.5 opacity-60 hover:opacity-100"
+                style={{ borderColor: "var(--border)" }}
+              >
+                <LockOpen size={16} />
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={() => setLoginOpen(true)}
+              aria-label="Entrar"
+              className="flex items-center gap-1.5 rounded-xl border px-3 py-2 text-sm"
+              style={{ borderColor: "var(--border)", color: "var(--muted)" }}
+            >
+              <Lock size={14} />
+              Entrar
+            </button>
+          )}
         </div>
       </header>
 
@@ -141,6 +178,7 @@ export default function Library() {
             <ItemCard
               key={item.id}
               item={item}
+              authed={authed}
               onDelete={handleDelete}
               onTagClick={setActiveTag}
               onOpen={setActiveItem}
@@ -155,8 +193,11 @@ export default function Library() {
         onCreated={(item) => setItems((prev) => [item, ...prev])}
       />
 
+      <LoginModal open={loginOpen} onClose={() => setLoginOpen(false)} onLoggedIn={() => setAuthed(true)} />
+
       <DetailModal
         item={activeItem}
+        authed={authed}
         onClose={() => setActiveItem(null)}
         onDelete={handleDelete}
         onUpdated={handleUpdated}

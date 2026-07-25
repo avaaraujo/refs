@@ -7,11 +7,13 @@ import type { Item } from "@/lib/types";
 
 export default function ItemCard({
   item,
+  authed,
   onDelete,
   onTagClick,
   onOpen,
 }: {
   item: Item;
+  authed: boolean;
   onDelete: (id: string) => void;
   onTagClick: (tag: string) => void;
   onOpen: (item: Item) => void;
@@ -47,15 +49,17 @@ export default function ItemCard({
                 <ArrowSquareOut size={14} />
               </a>
             )}
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onDelete(item.id);
-              }}
-              className="rounded-full bg-black/60 p-1.5 text-white backdrop-blur hover:bg-red-600"
-            >
-              <Trash size={14} />
-            </button>
+            {authed && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete(item.id);
+                }}
+                className="rounded-full bg-black/60 p-1.5 text-white backdrop-blur hover:bg-red-600"
+              >
+                <Trash size={14} />
+              </button>
+            )}
           </div>
         )}
       </div>

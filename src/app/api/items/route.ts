@@ -4,6 +4,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { tagImage } from "@/lib/tagging";
 import { captureScreenshot, extractDomain } from "@/lib/screenshot";
 import { detectTech } from "@/lib/techDetect";
+import { normalizeUrl } from "@/lib/normalizeUrl";
+import { isAuthed } from "@/lib/auth";
 
 export async function GET(req: NextRequest) {
   const tag = req.nextUrl.searchParams.get("tag");
@@ -20,9 +22,14 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  if (!(await isAuthed())) {
+    return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
+  }
+
   const formData = await req.formData();
   const file = formData.get("file") as File | null;
-  const url = (formData.get("url") as string | null)?.trim() || null;
+  const rawUrl = (formData.get("url") as string | null)?.trim() || null;
+  const url = rawUrl ? normalizeUrl(rawUrl) : null;
   const notes = (formData.get("notes") as string | null)?.trim() || null;
 
   if (!file && !url) {

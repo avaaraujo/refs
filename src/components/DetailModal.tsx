@@ -29,11 +29,13 @@ function Pill({ children }: { children: React.ReactNode }) {
 
 export default function DetailModal({
   item,
+  authed,
   onClose,
   onDelete,
   onUpdated,
 }: {
   item: Item | null;
+  authed: boolean;
   onClose: () => void;
   onDelete: (id: string) => void;
   onUpdated: (item: Item) => void;
@@ -156,41 +158,49 @@ export default function DetailModal({
               </Field>
             )}
 
-            <Field label="Notas">
-              <div className="flex flex-col gap-2">
-                <textarea
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  rows={3}
-                  placeholder="Adicionar uma nota..."
-                  className="rounded-lg border px-2.5 py-2 text-sm outline-none"
-                  style={{ borderColor: "var(--border)", background: "transparent" }}
-                />
-                {notes !== (item.notes ?? "") && (
-                  <button
-                    onClick={saveNotes}
-                    disabled={savingNotes}
-                    className="flex w-fit items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-medium text-white disabled:opacity-50"
-                    style={{ background: "var(--accent)" }}
-                  >
-                    <Check size={12} /> Salvar
-                  </button>
+            {(authed || notes) && (
+              <Field label="Notas">
+                {authed ? (
+                  <div className="flex flex-col gap-2">
+                    <textarea
+                      value={notes}
+                      onChange={(e) => setNotes(e.target.value)}
+                      rows={3}
+                      placeholder="Adicionar uma nota..."
+                      className="rounded-lg border px-2.5 py-2 text-sm outline-none"
+                      style={{ borderColor: "var(--border)", background: "transparent" }}
+                    />
+                    {notes !== (item.notes ?? "") && (
+                      <button
+                        onClick={saveNotes}
+                        disabled={savingNotes}
+                        className="flex w-fit items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-medium text-white disabled:opacity-50"
+                        style={{ background: "var(--accent)" }}
+                      >
+                        <Check size={12} /> Salvar
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  notes
                 )}
-              </div>
-            </Field>
+              </Field>
+            )}
           </div>
 
-          <div className="border-t p-4" style={{ borderColor: "var(--border)" }}>
-            <button
-              onClick={() => {
-                onDelete(item.id);
-                onClose();
-              }}
-              className="flex items-center gap-1.5 text-xs text-red-500 hover:text-red-600"
-            >
-              <Trash size={14} /> Apagar referência
-            </button>
-          </div>
+          {authed && (
+            <div className="border-t p-4" style={{ borderColor: "var(--border)" }}>
+              <button
+                onClick={() => {
+                  onDelete(item.id);
+                  onClose();
+                }}
+                className="flex items-center gap-1.5 text-xs text-red-500 hover:text-red-600"
+              >
+                <Trash size={14} /> Apagar referência
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>
