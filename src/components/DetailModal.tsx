@@ -7,9 +7,11 @@ import { publicImageUrl } from "@/lib/publicUrl";
 import { timeAgo } from "@/lib/timeAgo";
 import type { Item } from "@/lib/types";
 
+// linha compacta pra dentro do cluster de taxonomia: sem borda própria,
+// a borda é do container que agrupa Style/Color/Tech/Tags como um bloco só
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="grid grid-cols-[100px_1fr] gap-3 border-t py-3 text-sm" style={{ borderColor: "var(--border)" }}>
+    <div className="grid grid-cols-[100px_1fr] gap-3 py-1.5 text-sm">
       <span style={{ color: "var(--muted)" }}>{label}</span>
       <div>{children}</div>
     </div>
@@ -59,6 +61,8 @@ export default function DetailModal({
   }, [onClose]);
 
   if (!item) return null;
+
+  const hasTaxonomy = item.style.length > 0 || Boolean(item.color) || item.tech.length > 0 || item.tags.length > 0;
 
   async function recapture() {
     setRecapturing(true);
@@ -156,55 +160,65 @@ export default function DetailModal({
               </p>
             )}
 
-            <p className="mt-2 text-xs" style={{ color: "var(--muted)" }}>
-              {timeAgo(item.created_at)}
-            </p>
+            {/* proveniência: fonte + data, junto da identidade — não é taxonomia */}
+            <div className="mt-2 flex items-center gap-1.5 text-xs" style={{ color: "var(--muted)" }}>
+              {item.url && (
+                <>
+                  <a
+                    href={item.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1 hover:underline"
+                    style={{ color: "var(--fg)" }}
+                  >
+                    {item.source_domain} <ArrowSquareOut size={11} />
+                  </a>
+                  <span aria-hidden="true">·</span>
+                </>
+              )}
+              <span>{timeAgo(item.created_at)}</span>
+            </div>
 
-            {item.url && (
-              <Field label="Source">
-                <a
-                  href={item.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-1 text-sm hover:underline"
-                >
-                  {item.source_domain} <ArrowSquareOut size={13} />
-                </a>
-              </Field>
+            {/* taxonomia gerada por IA — o valor central do produto (ver PRODUCT.md):
+                um cluster só, com rodapé próprio, não uma lista de linhas soltas */}
+            {hasTaxonomy && (
+              <div className="mt-4 border-t pt-3" style={{ borderColor: "var(--border)" }}>
+                {item.style.length > 0 && (
+                  <Field label="Style">
+                    {item.style.map((s) => (
+                      <Pill key={s} tone="style">
+                        {s}
+                      </Pill>
+                    ))}
+                  </Field>
+                )}
+                {item.color && <Field label="Color">{item.color}</Field>}
+                {item.tech.length > 0 && (
+                  <Field label="Tech">
+                    {item.tech.map((t) => (
+                      <Pill key={t} tone="tech">
+                        {t}
+                      </Pill>
+                    ))}
+                  </Field>
+                )}
+                {item.tags.length > 0 && (
+                  <Field label="Tags">
+                    {item.tags.map((t) => (
+                      <Pill key={t}>{t}</Pill>
+                    ))}
+                  </Field>
+                )}
+              </div>
             )}
 
-            {item.style.length > 0 && (
-              <Field label="Style">
-                {item.style.map((s) => (
-                  <Pill key={s} tone="style">
-                    {s}
-                  </Pill>
-                ))}
-              </Field>
-            )}
-
-            {item.color && <Field label="Color">{item.color}</Field>}
-
-            {item.tech.length > 0 && (
-              <Field label="Tech">
-                {item.tech.map((t) => (
-                  <Pill key={t} tone="tech">
-                    {t}
-                  </Pill>
-                ))}
-              </Field>
-            )}
-
-            {item.tags.length > 0 && (
-              <Field label="Tags">
-                {item.tags.map((t) => (
-                  <Pill key={t}>{t}</Pill>
-                ))}
-              </Field>
-            )}
-
+            {/* notas: campo editável, tratamento de formulário (label em cima),
+                não uma linha de dado somente-leitura */}
             {(authed || notes) && (
-              <Field label="Notas">
+              <div className="mt-4 border-t pt-4" style={{ borderColor: "var(--border)" }}>
+                <p className="mb-2 text-xs font-medium uppercase tracking-wide" style={{ color: "var(--muted)" }}>
+                  Notas
+                </p>
                 {authed ? (
                   <div className="flex flex-col gap-2">
                     <textarea
@@ -228,54 +242,54 @@ export default function DetailModal({
                     )}
                   </div>
                 ) : (
-                  notes
+                  <p className="text-sm">{notes}</p>
                 )}
-              </Field>
+              </div>
             )}
           </div>
 
-          {authed && item.url && (
-            <div className="border-t p-4" style={{ borderColor: "var(--border)" }}>
-              <p className="mb-2 text-xs" style={{ color: "var(--muted)" }}>
-                Print saiu errado (ex: animação de entrada não terminou)? Recapture.
-              </p>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={recapture}
-                  disabled={recapturing}
-                  className="flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition hover:border-[var(--accent)] hover:text-[var(--accent)] disabled:opacity-50"
-                  style={{ borderColor: "var(--border)" }}
-                >
-                  <ArrowClockwise size={13} className={recapturing ? "animate-spin" : undefined} />
-                  {recapturing ? "Recapturando..." : "Recapturar"}
-                </button>
-                <label className="flex items-center gap-1.5 text-xs" style={{ color: "var(--muted)" }}>
-                  esperar
-                  <input
-                    type="number"
-                    min={0}
-                    max={15}
-                    value={delay}
-                    onChange={(e) => setDelay(Number(e.target.value))}
-                    disabled={recapturing}
-                    className="w-12 rounded-md border px-1.5 py-1 text-xs outline-none"
-                    style={{ borderColor: "var(--border)", background: "transparent" }}
-                  />
-                  s
-                </label>
-              </div>
-            </div>
-          )}
-
           {authed && (
-            <div className="border-t p-4" style={{ borderColor: "var(--border)" }}>
+            <div className="flex flex-col gap-4 border-t p-5" style={{ borderColor: "var(--border)" }}>
+              {item.url && (
+                <div>
+                  <p className="mb-2 text-xs" style={{ color: "var(--muted)" }}>
+                    Print saiu errado (ex: animação de entrada não terminou)? Recapture.
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={recapture}
+                      disabled={recapturing}
+                      className="flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition hover:border-[var(--accent)] hover:text-[var(--accent)] disabled:opacity-50"
+                      style={{ borderColor: "var(--border)" }}
+                    >
+                      <ArrowClockwise size={13} className={recapturing ? "animate-spin" : undefined} />
+                      {recapturing ? "Recapturando..." : "Recapturar"}
+                    </button>
+                    <label className="flex items-center gap-1.5 text-xs" style={{ color: "var(--muted)" }}>
+                      esperar
+                      <input
+                        type="number"
+                        min={0}
+                        max={15}
+                        value={delay}
+                        onChange={(e) => setDelay(Number(e.target.value))}
+                        disabled={recapturing}
+                        className="w-12 rounded-md border px-1.5 py-1 text-xs outline-none"
+                        style={{ borderColor: "var(--border)", background: "transparent" }}
+                      />
+                      s
+                    </label>
+                  </div>
+                </div>
+              )}
+
               <button
                 onClick={() => {
                   if (!window.confirm("Apagar esta referência?")) return;
                   onDelete(item.id);
                   onClose();
                 }}
-                className="flex items-center gap-1.5 text-xs transition hover:opacity-80"
+                className="flex w-fit items-center gap-1.5 text-xs transition hover:opacity-80"
                 style={{ color: "var(--danger)" }}
               >
                 <Trash size={14} /> Apagar referência
