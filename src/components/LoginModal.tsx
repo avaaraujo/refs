@@ -76,7 +76,7 @@ export default function LoginModal({
           <button
             type="submit"
             disabled={loading || !email || !password}
-            className="rounded-xl px-4 py-2.5 text-sm font-medium text-white transition disabled:opacity-50"
+            className="rounded-xl px-4 py-2.5 text-sm font-medium text-white transition hover:brightness-90 disabled:opacity-50 disabled:hover:brightness-100"
             style={{ background: "var(--accent)" }}
           >
             {loading ? "Entrando..." : "Entrar"}

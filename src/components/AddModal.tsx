@@ -84,8 +84,7 @@ export default function AddModal({
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div
-            className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed p-6 text-center"
-            style={{ borderColor: "var(--border)" }}
+            className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-[var(--border)] p-6 text-center transition hover:border-[var(--accent)]"
             onClick={() => fileInputRef.current?.click()}
           >
             {preview ? (
@@ -145,7 +144,7 @@ export default function AddModal({
           <button
             type="submit"
             disabled={loading}
-            className="rounded-xl px-4 py-2.5 text-sm font-medium text-white transition disabled:opacity-50"
+            className="rounded-xl px-4 py-2.5 text-sm font-medium text-white transition hover:brightness-90 disabled:opacity-50 disabled:hover:brightness-100"
             style={{ background: "var(--accent)" }}
           >
             {loading ? "Salvando e gerando tags..." : "Salvar referência"}

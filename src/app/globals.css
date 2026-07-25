@@ -3,10 +3,13 @@
 :root {
   --bg: #faf8f5;
   --fg: #17140f;
-  --muted: #8a8378;
+  --muted: #786c5e;
   --border: #e7e2d9;
   --card: #ffffff;
   --accent: #c1502e;
+  --style: #386e94;
+  --tech: #347957;
+  --danger: #973526;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -16,7 +19,10 @@
     --muted: #8f897d;
     --border: #2a2622;
     --card: #1a1816;
-    --accent: #e0774c;
+    --accent: #b95327;
+    --style: #5c97c1;
+    --tech: #57b787;
+    --danger: #d56858;
   }
 }
 
@@ -43,6 +49,11 @@ a {
 ::selection {
   background: var(--accent);
   color: #fff;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .scroll-thin::-webkit-scrollbar {

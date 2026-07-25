@@ -4,7 +4,7 @@ export type ScreenshotResult = {
 };
 
 export async function captureScreenshot(url: string): Promise<ScreenshotResult> {
-  const shotUrl = `https://image.thum.io/get/width/1400/noanimate/${url}`;
+  const shotUrl = `https://image.thum.io/get/width/1400/crop/900/noanimate/${url}`;
   const res = await fetch(shotUrl);
   if (!res.ok) {
     throw new Error(`Falha ao capturar screenshot (${res.status})`);

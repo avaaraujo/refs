@@ -22,11 +22,20 @@ export default function ItemCard({
 
   return (
     <div
-      className="group mb-4 break-inside-avoid cursor-pointer overflow-hidden rounded-xl border"
-      style={{ borderColor: "var(--border)", background: "var(--card)" }}
+      role="button"
+      tabIndex={0}
+      aria-label={`Abrir referência: ${item.title ?? "sem título"}`}
+      className="group mb-4 break-inside-avoid cursor-pointer overflow-hidden rounded-xl border transition-[transform,box-shadow,border-color] duration-150 hover:-translate-y-0.5 hover:shadow-lg"
+      style={{ borderColor: hover ? "var(--accent)" : "var(--border)", background: "var(--card)" }}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
       onClick={() => onOpen(item)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onOpen(item);
+        }
+      }}
     >
       <div className="relative">
         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -53,9 +62,10 @@ export default function ItemCard({
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  onDelete(item.id);
+                  if (window.confirm("Apagar esta referência?")) onDelete(item.id);
                 }}
-                className="rounded-full bg-black/60 p-1.5 text-white backdrop-blur hover:bg-red-600"
+                aria-label="Apagar referência"
+                className="rounded-full bg-black/60 p-1.5 text-white backdrop-blur transition hover:bg-[var(--danger)]"
               >
                 <Trash size={14} />
               </button>
@@ -64,6 +74,14 @@ export default function ItemCard({
         )}
       </div>
       <div className="p-3">
+        {item.category && (
+          <p
+            className="mb-1 text-[10px] font-bold uppercase tracking-wide"
+            style={{ color: "var(--accent)" }}
+          >
+            {item.category}
+          </p>
+        )}
         <p className="text-sm font-medium leading-snug">{item.title}</p>
         {item.description && (
           <p className="mt-0.5 text-xs" style={{ color: "var(--muted)" }}>
@@ -79,8 +97,7 @@ export default function ItemCard({
                   e.stopPropagation();
                   onTagClick(tag);
                 }}
-                className="rounded-full border px-2 py-0.5 text-[11px] transition hover:opacity-70"
-                style={{ borderColor: "var(--border)", color: "var(--muted)" }}
+                className="rounded-full border border-[var(--border)] px-2 py-0.5 text-[11px] text-[var(--muted)] transition hover:border-[var(--accent)] hover:text-[var(--accent)]"
               >
                 {tag}
               </button>

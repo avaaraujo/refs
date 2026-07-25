@@ -16,11 +16,12 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-function Pill({ children }: { children: React.ReactNode }) {
+function Pill({ children, tone = "default" }: { children: React.ReactNode; tone?: "default" | "style" | "tech" }) {
+  const color = tone === "style" ? "var(--style)" : tone === "tech" ? "var(--tech)" : "var(--fg)";
   return (
     <span
       className="mr-1.5 mb-1.5 inline-block rounded-full border px-2 py-0.5 text-xs"
-      style={{ borderColor: "var(--border)", color: "var(--fg)" }}
+      style={{ borderColor: "var(--border)", color }}
     >
       {children}
     </span>
@@ -92,7 +93,7 @@ export default function DetailModal({
           <div className="flex items-start justify-between p-5 pb-0">
             <div>
               {item.category && (
-                <p className="text-xs font-medium uppercase tracking-wide" style={{ color: "var(--muted)" }}>
+                <p className="text-xs font-bold uppercase tracking-wide" style={{ color: "var(--accent)" }}>
                   {item.category}
                 </p>
               )}
@@ -135,7 +136,9 @@ export default function DetailModal({
             {item.style.length > 0 && (
               <Field label="Style">
                 {item.style.map((s) => (
-                  <Pill key={s}>{s}</Pill>
+                  <Pill key={s} tone="style">
+                    {s}
+                  </Pill>
                 ))}
               </Field>
             )}
@@ -145,7 +148,9 @@ export default function DetailModal({
             {item.tech.length > 0 && (
               <Field label="Tech">
                 {item.tech.map((t) => (
-                  <Pill key={t}>{t}</Pill>
+                  <Pill key={t} tone="tech">
+                    {t}
+                  </Pill>
                 ))}
               </Field>
             )}
@@ -174,7 +179,7 @@ export default function DetailModal({
                       <button
                         onClick={saveNotes}
                         disabled={savingNotes}
-                        className="flex w-fit items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-medium text-white disabled:opacity-50"
+                        className="flex w-fit items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-medium text-white transition hover:brightness-90 disabled:opacity-50 disabled:hover:brightness-100"
                         style={{ background: "var(--accent)" }}
                       >
                         <Check size={12} /> Salvar
@@ -192,10 +197,12 @@ export default function DetailModal({
             <div className="border-t p-4" style={{ borderColor: "var(--border)" }}>
               <button
                 onClick={() => {
+                  if (!window.confirm("Apagar esta referência?")) return;
                   onDelete(item.id);
                   onClose();
                 }}
-                className="flex items-center gap-1.5 text-xs text-red-500 hover:text-red-600"
+                className="flex items-center gap-1.5 text-xs transition hover:opacity-80"
+                style={{ color: "var(--danger)" }}
               >
                 <Trash size={14} /> Apagar referência
               </button>

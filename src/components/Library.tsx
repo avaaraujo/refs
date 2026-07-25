@@ -82,8 +82,10 @@ export default function Library() {
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
       <header className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">Refs</h1>
-          <p className="text-sm" style={{ color: "var(--muted)" }}>
+          <h1 className="text-4xl font-black tracking-tighter sm:text-5xl">
+            Refs<span style={{ color: "var(--accent)" }}>.</span>
+          </h1>
+          <p className="mt-1 text-sm" style={{ color: "var(--muted)" }}>
             {items.length} referência{items.length === 1 ? "" : "s"} salvas
           </p>
         </div>
@@ -104,7 +106,7 @@ export default function Library() {
             <>
               <button
                 onClick={() => setModalOpen(true)}
-                className="flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-medium text-white"
+                className="flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-medium text-white transition hover:brightness-90"
                 style={{ background: "var(--accent)" }}
               >
                 <Plus size={16} weight="bold" />
@@ -123,8 +125,7 @@ export default function Library() {
             <button
               onClick={() => setLoginOpen(true)}
               aria-label="Entrar"
-              className="flex items-center gap-1.5 rounded-xl border px-3 py-2 text-sm"
-              style={{ borderColor: "var(--border)", color: "var(--muted)" }}
+              className="flex items-center gap-1.5 rounded-xl border border-[var(--border)] px-3 py-2 text-sm text-[var(--muted)] transition hover:border-[var(--accent)] hover:text-[var(--accent)]"
             >
               <Lock size={14} />
               Entrar
@@ -138,7 +139,7 @@ export default function Library() {
           {activeTag && (
             <button
               onClick={() => setActiveTag(null)}
-              className="flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium text-white"
+              className="flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium text-white transition hover:brightness-90"
               style={{ background: "var(--accent)" }}
             >
               {activeTag}
@@ -152,8 +153,7 @@ export default function Library() {
               <button
                 key={tag}
                 onClick={() => setActiveTag(tag)}
-                className="rounded-full border px-2.5 py-1 text-xs transition hover:opacity-70"
-                style={{ borderColor: "var(--border)", color: "var(--muted)" }}
+                className="rounded-full border border-[var(--border)] px-2.5 py-1 text-xs text-[var(--muted)] transition hover:border-[var(--accent)] hover:text-[var(--accent)]"
               >
                 {tag} <span className="opacity-60">{count}</span>
               </button>
