@@ -1,0 +1,107 @@
+import { NextRequest, NextResponse } from "next/server";
+import { randomUUID } from "crypto";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { tagImage } from "@/lib/tagging";
+import { captureScreenshot, extractDomain } from "@/lib/screenshot";
+import { detectTech } from "@/lib/techDetect";
+
+export async function GET(req: NextRequest) {
+  const tag = req.nextUrl.searchParams.get("tag");
+  const q = req.nextUrl.searchParams.get("q");
+  const supabase = createAdminClient();
+
+  let query = supabase.from("items").select("*").order("created_at", { ascending: false });
+  if (tag) query = query.contains("tags", [tag]);
+  if (q) query = query.or(`title.ilike.%${q}%,description.ilike.%${q}%`);
+
+  const { data, error } = await query;
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json({ items: data });
+}
+
+export async function POST(req: NextRequest) {
+  const formData = await req.formData();
+  const file = formData.get("file") as File | null;
+  const url = (formData.get("url") as string | null)?.trim() || null;
+  const notes = (formData.get("notes") as string | null)?.trim() || null;
+
+  if (!file && !url) {
+    return NextResponse.json({ error: "Envie um print ou um link." }, { status: 400 });
+  }
+
+  let bytes: Buffer;
+  let mediaType: "image/jpeg" | "image/png" | "image/webp" = "image/jpeg";
+
+  try {
+    if (file) {
+      bytes = Buffer.from(await file.arrayBuffer());
+      if (file.type === "image/png") mediaType = "image/png";
+      else if (file.type === "image/webp") mediaType = "image/webp";
+    } else {
+      const shot = await captureScreenshot(url!);
+      bytes = shot.bytes;
+      mediaType = shot.mediaType;
+    }
+  } catch (e) {
+    return NextResponse.json(
+      { error: e instanceof Error ? e.message : "Falha ao processar imagem." },
+      { status: 400 },
+    );
+  }
+
+  const supabase = createAdminClient();
+  const ext = mediaType === "image/png" ? "png" : mediaType === "image/webp" ? "webp" : "jpg";
+  const path = `${randomUUID()}.${ext}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from("refs")
+    .upload(path, bytes, { contentType: mediaType, upsert: false });
+
+  if (uploadError) {
+    return NextResponse.json({ error: uploadError.message }, { status: 500 });
+  }
+
+  let tagging = {
+    title: "Sem título",
+    description: "",
+    category: "",
+    style: [] as string[],
+    color: "",
+    tags: [] as string[],
+  };
+  try {
+    tagging = await tagImage({
+      imageBase64: bytes.toString("base64"),
+      mediaType,
+      urlHint: url ?? undefined,
+    });
+  } catch (e) {
+    console.error("tagging failed", e);
+  }
+
+  const tech = url ? await detectTech(url) : [];
+
+  const { data, error: insertError } = await supabase
+    .from("items")
+    .insert({
+      url,
+      source_domain: url ? extractDomain(url) : null,
+      image_path: path,
+      title: tagging.title,
+      description: tagging.description,
+      category: tagging.category || null,
+      style: tagging.style,
+      color: tagging.color || null,
+      tech,
+      tags: tagging.tags,
+      notes,
+    })
+    .select("*")
+    .single();
+
+  if (insertError) {
+    return NextResponse.json({ error: insertError.message }, { status: 500 });
+  }
+
+  return NextResponse.json({ item: data }, { status: 201 });
+}
