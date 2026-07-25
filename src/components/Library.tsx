@@ -83,7 +83,7 @@ export default function Library() {
       <header className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="font-display text-4xl tracking-tight sm:text-5xl">
-            Refs<span style={{ color: "var(--accent)" }}>.</span>
+            Refs do Avá<span style={{ color: "var(--accent)" }}>.</span>
           </h1>
           <p className="mt-1 text-sm" style={{ color: "var(--muted)" }}>
             {items.length} referência{items.length === 1 ? "" : "s"} salvas

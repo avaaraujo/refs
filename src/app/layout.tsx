@@ -4,7 +4,7 @@ import { Toaster } from "sonner";
 import { vulfSans, plexSans, canela } from "./fonts";
 
 export const metadata: Metadata = {
-  title: "Refs — biblioteca de referências",
+  title: "Refs do Avá — biblioteca de referências",
   description: "Sua biblioteca de referências visuais, organizada por IA.",
 };
 
