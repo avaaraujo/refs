@@ -108,11 +108,15 @@ export default function DetailModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="detail-modal-title"
-        className="flex max-h-[90vh] w-full max-w-4xl overflow-hidden rounded-2xl border"
+        className="flex max-h-[90vh] w-full max-w-4xl items-start overflow-hidden rounded-2xl border"
         style={{ background: "var(--card)", borderColor: "var(--border)" }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="hidden flex-1 items-start justify-center overflow-auto bg-black/5 sm:flex">
+        {/* sem stretch: a coluna só cresce até a altura natural do print
+            (recorte 1400x900, quase sempre mais raso que o sidebar cheio de
+            tags), sem sobra pintada de cinza embaixo — e usa o espaço que
+            sobra pra deixar "visitar o site" bem mais visível */}
+        <div className="hidden max-h-[90vh] flex-1 flex-col overflow-hidden sm:flex">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={publicImageUrl(item.image_path)}
@@ -120,9 +124,27 @@ export default function DetailModal({
             className="w-full object-cover"
             style={{ viewTransitionName: "card-img" }}
           />
+          {item.url && (
+            <a
+              href={item.url}
+              target="_blank"
+              rel="noreferrer"
+              className="mx-4 mt-4 flex items-center gap-2 rounded-xl border px-3 py-2.5 text-sm transition hover:border-[var(--accent)]"
+              style={{ borderColor: "var(--border)" }}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={`https://www.google.com/s2/favicons?domain=${item.source_domain}&sz=32`}
+                alt=""
+                className="h-4 w-4 shrink-0 rounded-sm"
+              />
+              <span className="flex-1 truncate">Ver {item.source_domain}</span>
+              <ArrowSquareOut size={14} style={{ color: "var(--muted)" }} />
+            </a>
+          )}
         </div>
 
-        <div className="scroll-thin flex w-full flex-col overflow-y-auto sm:w-[380px]">
+        <div className="scroll-thin flex max-h-[90vh] w-full flex-col overflow-y-auto sm:w-[380px]">
           <div className="flex items-start justify-between p-5 pb-0">
             <div>
               {item.category && (
