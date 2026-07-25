@@ -45,33 +45,33 @@ export default function ItemCard({
           className="w-full object-cover"
           loading="lazy"
         />
-        {hover && (
-          <div className="absolute inset-x-0 top-0 flex justify-end gap-1 p-2">
-            {item.url && (
-              <a
-                href={item.url}
-                target="_blank"
-                rel="noreferrer"
-                onClick={(e) => e.stopPropagation()}
-                className="rounded-full bg-black/60 p-1.5 text-white backdrop-blur hover:bg-black/80"
-              >
-                <ArrowSquareOut size={14} />
-              </a>
-            )}
-            {authed && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (window.confirm("Apagar esta referência?")) onDelete(item.id);
-                }}
-                aria-label="Apagar referência"
-                className="rounded-full bg-black/60 p-1.5 text-white backdrop-blur transition hover:bg-[var(--danger)]"
-              >
-                <Trash size={14} />
-              </button>
-            )}
-          </div>
-        )}
+        {/* sempre no DOM (não só em hover) pra ficar alcançável via Tab;
+            visibilidade é só CSS, revelada por mouse OU foco de teclado */}
+        <div className="absolute inset-x-0 top-0 flex justify-end gap-1 p-2 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+          {item.url && (
+            <a
+              href={item.url}
+              target="_blank"
+              rel="noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="rounded-full bg-black/60 p-1.5 text-white backdrop-blur hover:bg-black/80"
+            >
+              <ArrowSquareOut size={14} />
+            </a>
+          )}
+          {authed && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                if (window.confirm("Apagar esta referência?")) onDelete(item.id);
+              }}
+              aria-label="Apagar referência"
+              className="rounded-full bg-black/60 p-1.5 text-white backdrop-blur transition hover:bg-[var(--danger)]"
+            >
+              <Trash size={14} />
+            </button>
+          )}
+        </div>
       </div>
       <div className="p-3">
         {item.category && (

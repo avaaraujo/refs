@@ -71,12 +71,17 @@ export default function AddModal({
       onClick={onClose}
     >
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="add-modal-title"
         className="w-full max-w-md rounded-2xl border p-6"
         style={{ background: "var(--card)", borderColor: "var(--border)" }}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Nova referência</h2>
+          <h2 id="add-modal-title" className="text-lg font-semibold">
+            Nova referência
+          </h2>
           <button onClick={onClose} aria-label="Fechar" className="opacity-60 hover:opacity-100">
             <X size={20} />
           </button>
@@ -121,6 +126,7 @@ export default function AddModal({
               type="text"
               inputMode="url"
               placeholder="apple.com ou https://apple.com"
+              aria-label="Link do site"
               value={url}
               onChange={(e) => setUrl(e.target.value)}
               className="flex-1 bg-transparent text-sm outline-none"
@@ -134,6 +140,7 @@ export default function AddModal({
 
           <textarea
             placeholder="Notas (opcional)"
+            aria-label="Notas"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             rows={2}
@@ -144,8 +151,8 @@ export default function AddModal({
           <button
             type="submit"
             disabled={loading}
-            className="rounded-xl px-4 py-2.5 text-sm font-medium text-white transition hover:brightness-90 disabled:opacity-50 disabled:hover:brightness-100"
-            style={{ background: "var(--accent)" }}
+            className="rounded-xl px-4 py-2.5 text-sm font-medium transition hover:brightness-90 disabled:opacity-50 disabled:hover:brightness-100"
+            style={{ background: "var(--accent)", color: "var(--on-accent)" }}
           >
             {loading ? "Salvando e gerando tags..." : "Salvar referência"}
           </button>

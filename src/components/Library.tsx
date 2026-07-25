@@ -99,6 +99,7 @@ export default function Library() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Buscar..."
+              aria-label="Buscar referências"
               className="w-40 bg-transparent text-sm outline-none sm:w-56"
             />
           </div>
@@ -106,8 +107,8 @@ export default function Library() {
             <>
               <button
                 onClick={() => setModalOpen(true)}
-                className="flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-medium text-white transition hover:brightness-90"
-                style={{ background: "var(--accent)" }}
+                className="flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-medium transition hover:brightness-90"
+                style={{ background: "var(--accent)", color: "var(--on-accent)" }}
               >
                 <Plus size={16} weight="bold" />
                 Adicionar
@@ -139,8 +140,8 @@ export default function Library() {
           {activeTag && (
             <button
               onClick={() => setActiveTag(null)}
-              className="flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium text-white transition hover:brightness-90"
-              style={{ background: "var(--accent)" }}
+              className="flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium transition hover:brightness-90"
+              style={{ background: "var(--accent)", color: "var(--on-accent)" }}
             >
               {activeTag}
               <X size={12} />

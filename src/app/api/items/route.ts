@@ -12,7 +12,13 @@ export async function GET(req: NextRequest) {
   const q = req.nextUrl.searchParams.get("q");
   const supabase = createAdminClient();
 
-  let query = supabase.from("items").select("*").order("created_at", { ascending: false });
+  // teto de segurança: sem isso, a query cresce sem limite conforme a
+  // biblioteca acumula referências (uso pretendido do produto)
+  let query = supabase
+    .from("items")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .range(0, 499);
   if (tag) query = query.contains("tags", [tag]);
   if (q) query = query.or(`title.ilike.%${q}%,description.ilike.%${q}%`);
 

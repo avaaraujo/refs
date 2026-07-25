@@ -9,9 +9,14 @@
   --border: #dee2d2;
   --card: #ffffff;
   --accent: #88bd26;
+  /* texto/ícone sobre fundo --accent: branco nele dá 2.25:1 (falha AA 4.5:1) */
+  --on-accent: #16210a;
   --style: #5f7a1c;
   --tech: #52627a;
   --danger: #b23d2b;
+  /* --accent tem só 2.06:1 contra fundos claros — abaixo dos 3:1 exigidos
+     pra indicador de foco (WCAG 1.4.11); usa --style, que já é mais escuro */
+  --focus-ring: var(--style);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -22,9 +27,12 @@
     --border: #333330;
     --card: #232320;
     --accent: #88bd26;
+    --on-accent: #16210a;
     --style: #a3d94b;
     --tech: #d3e3b5;
     --danger: #ff6b52;
+    /* no escuro --accent já bate 7.75:1 contra o fundo */
+    --focus-ring: var(--accent);
   }
 }
 
@@ -59,11 +67,11 @@ a {
 
 ::selection {
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
 }
 
 :focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
 }
 

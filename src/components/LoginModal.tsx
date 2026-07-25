@@ -41,12 +41,15 @@ export default function LoginModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="login-modal-title"
         className="w-full max-w-xs rounded-2xl border p-6"
         style={{ background: "var(--card)", borderColor: "var(--border)" }}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="flex items-center gap-1.5 text-lg font-semibold">
+          <h2 id="login-modal-title" className="flex items-center gap-1.5 text-lg font-semibold">
             <Lock size={16} /> Entrar
           </h2>
           <button onClick={onClose} aria-label="Fechar" className="opacity-60 hover:opacity-100">
@@ -59,6 +62,7 @@ export default function LoginModal({
             autoFocus
             autoComplete="email"
             placeholder="Email"
+            aria-label="Email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             className="rounded-xl border px-3 py-2 text-sm outline-none"
@@ -68,6 +72,7 @@ export default function LoginModal({
             type="password"
             autoComplete="current-password"
             placeholder="Senha"
+            aria-label="Senha"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className="rounded-xl border px-3 py-2 text-sm outline-none"
@@ -76,8 +81,8 @@ export default function LoginModal({
           <button
             type="submit"
             disabled={loading || !email || !password}
-            className="rounded-xl px-4 py-2.5 text-sm font-medium text-white transition hover:brightness-90 disabled:opacity-50 disabled:hover:brightness-100"
-            style={{ background: "var(--accent)" }}
+            className="rounded-xl px-4 py-2.5 text-sm font-medium transition hover:brightness-90 disabled:opacity-50 disabled:hover:brightness-100"
+            style={{ background: "var(--accent)", color: "var(--on-accent)" }}
           >
             {loading ? "Entrando..." : "Entrar"}
           </button>
