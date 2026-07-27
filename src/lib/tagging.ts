@@ -9,6 +9,8 @@ export type TaggingResult = {
   style: string[];
   color: string;
   tags: string[];
+  recipeTags: string[];
+  siteRecipe: string;
 };
 
 const SYSTEM_PROMPT = `Você analisa prints de design (sites, apps, produtos digitais) para uma biblioteca de referências visuais.
@@ -19,7 +21,9 @@ Dado um print, responda em JSON puro (sem markdown, sem comentários) com este f
   "category": "uma categoria curta (ex: Landing Page, Dashboard, Mobile App, Onboarding, Pricing, E-commerce, Portfolio)",
   "style": ["2 a 4 adjetivos de estilo visual, capitalizados, ex: Minimal, Editorial, Brutalist, Glassmorphism, Dark Mode"],
   "color": "descrição curta da paleta dominante, capitalizada, ex: Black & White, Pastel, High Contrast, Monochrome Green",
-  "tags": ["5 a 10 tags curtas em inglês, minúsculas, sem espaços (hífen se precisar), cobrindo categoria, estilo, cor, tipografia e padrões de UI notáveis"]
+  "tags": ["5 a 10 tags curtas em inglês, minúsculas, sem espaços (hífen se precisar), cobrindo categoria, estilo, cor, tipografia e padrões de UI notáveis"],
+  "recipeTags": ["4 a 6 frases curtas em inglês, cada uma capturando uma faceta distinta do estilo geral da página — composição/layout, tratamento de tipografia, paleta, um padrão de UI notável — mais descritivas que as tags. Ex: 'voxel-rendered landscape', 'serif headline with green emphasis', 'muted blue-coral-green palette', 'soft product buttons'"],
+  "siteRecipe": "um prompt pronto em inglês pra recriar essa direção visual num novo projeto (layout, tipografia, paleta com cores específicas, padrões de UI notáveis, tom geral), no formato 'Adapt [CONTENT] into this visual style: ...' com [CONTENT] como placeholder literal pro assunto do novo projeto — pra ser colado direto num prompt de geração de imagem ou de código"
 }
 
 Responda só o JSON.`;
@@ -67,8 +71,19 @@ export async function tagImage(params: {
       style: Array.isArray(parsed.style) ? parsed.style.map(String) : [],
       color: String(parsed.color ?? ""),
       tags: Array.isArray(parsed.tags) ? parsed.tags.map(String) : [],
+      recipeTags: Array.isArray(parsed.recipeTags) ? parsed.recipeTags.map(String) : [],
+      siteRecipe: String(parsed.siteRecipe ?? ""),
     };
   } catch {
-    return { title: "Sem título", description: "", category: "", style: [], color: "", tags: [] };
+    return {
+      title: "Sem título",
+      description: "",
+      category: "",
+      style: [],
+      color: "",
+      tags: [],
+      recipeTags: [],
+      siteRecipe: "",
+    };
   }
 }

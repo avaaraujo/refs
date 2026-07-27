@@ -79,6 +79,8 @@ export async function POST(
     update.style = tagging.style;
     update.color = tagging.color || null;
     update.tags = tagging.tags;
+    update.recipe_tags = tagging.recipeTags;
+    update.site_recipe = tagging.siteRecipe || null;
   } catch (e) {
     console.error("re-tagging failed", e);
   }

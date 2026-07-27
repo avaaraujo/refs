@@ -81,6 +81,8 @@ export async function POST(req: NextRequest) {
     style: [] as string[],
     color: "",
     tags: [] as string[],
+    recipeTags: [] as string[],
+    siteRecipe: "",
   };
   try {
     tagging = await tagImage({
@@ -107,6 +109,8 @@ export async function POST(req: NextRequest) {
       color: tagging.color || null,
       tech,
       tags: tagging.tags,
+      recipe_tags: tagging.recipeTags,
+      site_recipe: tagging.siteRecipe || null,
       notes,
     })
     .select("*")

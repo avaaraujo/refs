@@ -10,6 +10,8 @@ export type Item = {
   color: string | null;
   tech: string[];
   tags: string[];
+  recipe_tags: string[];
+  site_recipe: string | null;
   notes: string | null;
   created_at: string;
 };
