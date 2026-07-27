@@ -119,6 +119,25 @@ export default function Library() {
     });
   }
 
+  // navegação por setas dentro do modal: sem card de origem pra fazer morph
+  // (o modal já cobre a tela), então só o par imagem/título troca de nome
+  // pra crossfade suave entre os itens em vez de recriar o morph card->modal
+  function handleNavigate(delta: number) {
+    if (!activeItem) return;
+    const idx = filtered.findIndex((i) => i.id === activeItem.id);
+    if (idx === -1) return;
+    const next = filtered[idx + delta];
+    if (!next) return;
+    const doc = canMorph();
+    if (!doc) {
+      setActiveItem(next);
+      return;
+    }
+    doc.startViewTransition(() => {
+      flushSync(() => setActiveItem(next));
+    });
+  }
+
   function handleCloseDetail() {
     const item = activeItem;
     const doc = canMorph();
@@ -277,6 +296,11 @@ export default function Library() {
         onClose={handleCloseDetail}
         onDelete={handleDelete}
         onUpdated={handleUpdated}
+        onNavigate={handleNavigate}
+        hasPrev={activeItem ? filtered.findIndex((i) => i.id === activeItem.id) > 0 : false}
+        hasNext={
+          activeItem ? filtered.findIndex((i) => i.id === activeItem.id) < filtered.length - 1 : false
+        }
       />
     </div>
   );
