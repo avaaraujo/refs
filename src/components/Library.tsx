@@ -3,13 +3,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { flushSync } from "react-dom";
 import { toast } from "sonner";
-import { Plus, MagnifyingGlass, X, Lock, LockOpen } from "@phosphor-icons/react/dist/ssr";
+import { Plus, MagnifyingGlass, ClipboardText, X, Lock, LockOpen } from "@phosphor-icons/react/dist/ssr";
 import AddModal from "./AddModal";
 import DetailModal from "./DetailModal";
 import LoginModal from "./LoginModal";
 import ItemCard from "./ItemCard";
 import type { Item } from "@/lib/types";
 import { createClient } from "@/lib/supabase/client";
+import { buildBoardBrief } from "@/lib/brief";
 
 export default function Library() {
   const [items, setItems] = useState<Item[]>([]);
@@ -71,6 +72,16 @@ export default function Library() {
   function handleUpdated(updated: Item) {
     setItems((prev) => prev.map((i) => (i.id === updated.id ? updated : i)));
     setActiveItem(updated);
+  }
+
+  async function copyBoardBrief() {
+    const scopeLabel = activeTag ? `tag: ${activeTag}` : search.trim() ? `busca: "${search.trim()}"` : undefined;
+    try {
+      await navigator.clipboard.writeText(buildBoardBrief(filtered, scopeLabel));
+      toast.success(`Brief do board copiado (${filtered.length} ite${filtered.length === 1 ? "m" : "ns"}).`);
+    } catch {
+      toast.error("Erro ao copiar brief.");
+    }
   }
 
   async function handleLogout() {
@@ -154,6 +165,18 @@ export default function Library() {
               className="w-40 bg-transparent text-sm outline-none sm:w-56"
             />
           </div>
+          {!loading && filtered.length > 0 && (
+            <button
+              onClick={copyBoardBrief}
+              aria-label="Copiar brief do board"
+              title="Copiar brief do board"
+              className="flex items-center gap-1.5 rounded-xl border px-3 py-2 text-sm transition hover:border-[var(--accent)] hover:text-[var(--accent)]"
+              style={{ borderColor: "var(--border)", color: "var(--muted)" }}
+            >
+              <ClipboardText size={16} />
+              <span className="hidden sm:inline">Brief do board</span>
+            </button>
+          )}
           {authed ? (
             <>
               <button
