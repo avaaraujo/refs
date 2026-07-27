@@ -205,48 +205,46 @@ export default function DetailModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
-      {hasPrev && (
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onNavigate(-1);
-          }}
-          aria-label="Referência anterior"
-          className="absolute left-4 top-1/2 hidden h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full text-white transition hover:opacity-80 sm:flex md:left-8"
-          style={{ background: "rgba(255,255,255,0.1)" }}
-        >
-          <CaretLeft size={20} weight="bold" />
-        </button>
-      )}
-      {hasNext && (
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onNavigate(1);
-          }}
-          aria-label="Próxima referência"
-          className="absolute right-4 top-1/2 hidden h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full text-white transition hover:opacity-80 sm:flex md:right-8"
-          style={{ background: "rgba(255,255,255,0.1)" }}
-        >
-          <CaretRight size={20} weight="bold" />
-        </button>
-      )}
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center gap-8 bg-black/60 p-4"
+      onClick={onClose}
+    >
+      {/* botão fica invisible (não "hidden") quando não há anterior/próximo,
+          pra reservar o espaço e o modal não deslocar de lado nas pontas
+          da lista — o gap do flex já garante a distância fixa até o modal */}
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          if (hasPrev) onNavigate(-1);
+        }}
+        aria-label="Referência anterior"
+        aria-hidden={!hasPrev}
+        tabIndex={hasPrev ? 0 : -1}
+        className={`hidden h-11 w-11 shrink-0 items-center justify-center rounded-full text-white transition sm:flex ${
+          hasPrev ? "hover:opacity-80" : "invisible"
+        }`}
+        style={{ background: "rgba(255,255,255,0.1)" }}
+      >
+        <CaretLeft size={20} weight="bold" />
+      </button>
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby="detail-modal-title"
-        className="flex max-h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border sm:h-[620px] sm:flex-row"
+        className="flex max-h-[90vh] w-full flex-col overflow-hidden rounded-2xl border sm:h-[480px] sm:w-fit sm:flex-row"
         style={{ background: "var(--card)", borderColor: "var(--border)" }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* print preenche a coluna inteira (presença máxima da imagem) */}
-        <div className="relative shrink-0 sm:h-full sm:flex-1">
+        {/* recorte 4:3 do print (mesma proporção da captura): a altura é
+            fixa (a do modal) e a largura é derivada dela via aspect-ratio —
+            nunca o inverso, senão o painel ao lado (mais alto com Recipe
+            aberto) estica a imagem e distorce o recorte */}
+        <div className="relative shrink-0 aspect-[4/3] sm:h-full">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={publicImageUrl(item.image_path)}
             alt={item.title ?? ""}
-            className="h-56 w-full object-cover sm:h-full"
+            className="h-full w-full object-cover"
             style={{ viewTransitionName: "card-img" }}
           />
           {item.url && (
@@ -499,6 +497,21 @@ export default function DetailModal({
           </div>
         </div>
       </div>
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          if (hasNext) onNavigate(1);
+        }}
+        aria-label="Próxima referência"
+        aria-hidden={!hasNext}
+        tabIndex={hasNext ? 0 : -1}
+        className={`hidden h-11 w-11 shrink-0 items-center justify-center rounded-full text-white transition sm:flex ${
+          hasNext ? "hover:opacity-80" : "invisible"
+        }`}
+        style={{ background: "rgba(255,255,255,0.1)" }}
+      >
+        <CaretRight size={20} weight="bold" />
+      </button>
     </div>
   );
 }
