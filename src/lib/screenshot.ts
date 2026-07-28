@@ -41,7 +41,10 @@ export async function captureScreenshot(
 
   const res = await fetch(`https://api.screenshotone.com/take?${params}`);
   if (!res.ok) {
-    throw new Error(`Falha ao capturar screenshot: ${await readError(res)}`);
+    console.error("screenshotone failed", await readError(res));
+    throw new Error(
+      "Não consegui capturar o print desse site automaticamente (ele pode estar bloqueando bots). Envie um print manualmente.",
+    );
   }
 
   const contentType = res.headers.get("content-type") ?? "";
