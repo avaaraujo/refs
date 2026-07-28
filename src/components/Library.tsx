@@ -160,7 +160,7 @@ export default function Library() {
   }
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+    <div className="px-4 py-8 sm:px-6 lg:px-8">
       <header className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="font-display text-4xl tracking-tight sm:text-5xl">
@@ -268,7 +268,7 @@ export default function Library() {
           </p>
         </div>
       ) : (
-        <div className="columns-2 gap-4 sm:columns-3 lg:columns-4 xl:columns-5">
+        <div className="columns-2 gap-4 sm:columns-3 lg:columns-4 xl:columns-5 2xl:columns-6">
           {filtered.map((item) => (
             <ItemCard
               key={item.id}
