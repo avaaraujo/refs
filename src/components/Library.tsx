@@ -31,6 +31,7 @@ export default function Library() {
   const [activeItem, setActiveItem] = useState<Item | null>(null);
   const [activeTag, setActiveTag] = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [activeStyle, setActiveStyle] = useState<string | null>(null);
   const [activeColor, setActiveColor] = useState<string | null>(null);
   const [search, setSearch] = useState("");
 
@@ -108,6 +109,12 @@ export default function Library() {
     return [...set].sort();
   }, [items]);
 
+  const allStyles = useMemo(() => {
+    const set = new Set<string>();
+    for (const item of items) for (const s of item.style) set.add(s);
+    return [...set].sort();
+  }, [items]);
+
   const allColors = useMemo(() => {
     const set = new Set<string>();
     for (const item of items) if (item.color) set.add(item.color);
@@ -118,6 +125,7 @@ export default function Library() {
     return items.filter((item) => {
       if (activeTag && !item.tags.includes(activeTag)) return false;
       if (activeCategory && item.category !== activeCategory) return false;
+      if (activeStyle && !item.style.includes(activeStyle)) return false;
       if (activeColor && item.color !== activeColor) return false;
       if (activeCollection && item.collection_id !== activeCollection) return false;
       if (semanticMode) {
@@ -129,7 +137,7 @@ export default function Library() {
       }
       return true;
     });
-  }, [items, activeTag, activeCategory, activeColor, activeCollection, search, semanticMode, semanticIds]);
+  }, [items, activeTag, activeCategory, activeStyle, activeColor, activeCollection, search, semanticMode, semanticIds]);
 
   async function handleDelete(id: string) {
     setItems((prev) => prev.filter((i) => i.id !== id));
@@ -150,6 +158,7 @@ export default function Library() {
       activeCollection ? collections.find((c) => c.id === activeCollection)?.name : null,
       activeTag ? `tag: ${activeTag}` : null,
       activeCategory,
+      activeStyle,
       search.trim() ? `busca: "${search.trim()}"` : null,
     ].filter(Boolean);
     const scopeLabel = scopeParts.length > 0 ? scopeParts.join(", ") : undefined;
@@ -329,6 +338,21 @@ export default function Library() {
             {allCategories.map((c) => (
               <option key={c} value={c}>
                 {c}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={activeStyle ?? ""}
+            onChange={(e) => setActiveStyle(e.target.value || null)}
+            aria-label="Filtrar por estilo"
+            className="rounded-xl border bg-transparent px-2.5 py-2 text-sm outline-none"
+            style={{ borderColor: "var(--border)", color: "var(--muted)" }}
+          >
+            <option value="">Estilo</option>
+            {allStyles.map((s) => (
+              <option key={s} value={s}>
+                {s}
               </option>
             ))}
           </select>
