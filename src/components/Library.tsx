@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { flushSync } from "react-dom";
+import Link from "next/link";
 import { toast } from "sonner";
 import {
   Plus,
@@ -44,6 +45,12 @@ export default function Library() {
 
   const [retagging, setRetagging] = useState(false);
 
+  // fluxo do bookmarklet: abre a Library com ?add=<url-da-aba-de-origem>;
+  // aqui só espera o check de auth terminar pra decidir se abre direto o
+  // AddModal preenchido ou pede login antes
+  const [pendingUrl, setPendingUrl] = useState<string | null>(null);
+  const [authChecked, setAuthChecked] = useState(false);
+
   async function load() {
     setLoading(true);
     const res = await fetch("/api/items");
@@ -62,12 +69,30 @@ export default function Library() {
     load();
     loadCollections();
     const supabase = createClient();
-    supabase.auth.getUser().then(({ data }) => setAuthed(Boolean(data.user)));
+    supabase.auth.getUser().then(({ data }) => {
+      setAuthed(Boolean(data.user));
+      setAuthChecked(true);
+    });
     const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
       setAuthed(Boolean(session?.user));
     });
     return () => sub.subscription.unsubscribe();
   }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const add = params.get("add");
+    const collection = params.get("collection");
+    if (add) setPendingUrl(add);
+    if (collection) setActiveCollection(collection);
+    if (add || collection) window.history.replaceState(null, "", window.location.pathname);
+  }, []);
+
+  useEffect(() => {
+    if (!pendingUrl || !authChecked) return;
+    if (authed) setModalOpen(true);
+    else setLoginOpen(true);
+  }, [pendingUrl, authed, authChecked]);
 
   // busca semântica: roda em paralelo à busca textual (debounced) só quando
   // o modo está ligado — os resultados viram um filtro de ids (ver `filtered`)
@@ -167,25 +192,6 @@ export default function Library() {
       toast.success(`Brief do board copiado (${filtered.length} ite${filtered.length === 1 ? "m" : "ns"}).`);
     } catch {
       toast.error("Erro ao copiar brief.");
-    }
-  }
-
-  async function createCollection() {
-    const name = window.prompt("Nome da nova coleção:")?.trim();
-    if (!name) return;
-    try {
-      const res = await fetch("/api/collections", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name }),
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error);
-      setCollections((prev) => [...prev, json.collection].sort((a, b) => a.name.localeCompare(b.name)));
-      setActiveCollection(json.collection.id);
-      toast.success("Coleção criada.");
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Erro ao criar coleção.");
     }
   }
 
@@ -388,17 +394,15 @@ export default function Library() {
                   </option>
                 ))}
               </select>
-              {authed && (
-                <button
-                  onClick={createCollection}
-                  aria-label="Nova coleção"
-                  title="Nova coleção"
-                  className="rounded-xl border p-2 transition hover:border-[var(--accent)] hover:text-[var(--accent)]"
-                  style={{ borderColor: "var(--border)", color: "var(--muted)" }}
-                >
-                  <FolderSimple size={16} />
-                </button>
-              )}
+              <Link
+                href="/colecoes"
+                aria-label="Gerenciar coleções"
+                title="Gerenciar coleções"
+                className="rounded-xl border p-2 transition hover:border-[var(--accent)] hover:text-[var(--accent)]"
+                style={{ borderColor: "var(--border)", color: "var(--muted)" }}
+              >
+                <FolderSimple size={16} />
+              </Link>
             </div>
           )}
 
@@ -512,11 +516,25 @@ export default function Library() {
 
       <AddModal
         open={modalOpen}
-        onClose={() => setModalOpen(false)}
-        onCreated={(item) => setItems((prev) => [item, ...prev])}
+        initialUrl={pendingUrl ?? undefined}
+        onClose={() => {
+          setModalOpen(false);
+          setPendingUrl(null);
+        }}
+        onCreated={(item) => {
+          setItems((prev) => [item, ...prev]);
+          setPendingUrl(null);
+        }}
       />
 
-      <LoginModal open={loginOpen} onClose={() => setLoginOpen(false)} onLoggedIn={() => setAuthed(true)} />
+      <LoginModal
+        open={loginOpen}
+        onClose={() => {
+          setLoginOpen(false);
+          setPendingUrl(null);
+        }}
+        onLoggedIn={() => setAuthed(true)}
+      />
 
       <DetailModal
         item={activeItem}

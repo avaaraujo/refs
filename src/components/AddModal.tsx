@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { X, UploadSimple, LinkSimple } from "@phosphor-icons/react/dist/ssr";
 import type { Item } from "@/lib/types";
@@ -8,10 +8,12 @@ import { normalizeUrl } from "@/lib/normalizeUrl";
 
 export default function AddModal({
   open,
+  initialUrl,
   onClose,
   onCreated,
 }: {
   open: boolean;
+  initialUrl?: string;
   onClose: () => void;
   onCreated: (item: Item) => void;
 }) {
@@ -21,6 +23,13 @@ export default function AddModal({
   const [preview, setPreview] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // preenchido pelo fluxo do bookmarklet (ver Library.tsx, ?add=<url>) —
+  // só aplica quando o modal abre, senão sobrescreveria o que o dono já
+  // tiver digitado se initialUrl mudar com o modal já aberto
+  useEffect(() => {
+    if (open && initialUrl) setUrl(initialUrl);
+  }, [open, initialUrl]);
 
   if (!open) return null;
 

@@ -314,7 +314,7 @@ export default function DetailModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="detail-modal-title"
-        className="flex max-h-[90vh] w-full flex-col overflow-hidden rounded-2xl border sm:h-[480px] sm:w-fit sm:flex-row"
+        className="flex max-h-[90vh] w-full flex-col overflow-hidden rounded-2xl border sm:h-[min(78vh,480px)] sm:w-fit sm:flex-row lg:h-[min(80vh,640px)] xl:h-[min(82vh,760px)]"
         style={{ background: "var(--card)", borderColor: "var(--border)" }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -397,8 +397,8 @@ export default function DetailModal({
           )}
         </div>
 
-        <div className="flex w-full flex-col overflow-hidden sm:w-[400px] sm:shrink-0">
-          <div className="flex items-start justify-between gap-3 p-5 pb-3.5">
+        <div className="flex w-full flex-col overflow-hidden sm:w-[400px] sm:shrink-0 lg:w-[440px] xl:w-[500px]">
+          <div className="flex items-start justify-between gap-3 p-5 pb-3.5 lg:p-6 lg:pb-4">
             <div>
               {item.category && (
                 <p className="text-xs font-bold uppercase tracking-wide" style={{ color: "var(--accent)" }}>
@@ -423,7 +423,7 @@ export default function DetailModal({
             </button>
           </div>
 
-          <div className="scroll-thin flex-1 overflow-y-auto px-5">
+          <div className="scroll-thin flex-1 overflow-y-auto px-5 lg:px-6">
             {hasInfo && (
               <AccordionSection
                 label="Info & notas"
@@ -597,7 +597,7 @@ export default function DetailModal({
             )}
           </div>
 
-          <div className="border-t p-5" style={{ borderColor: "var(--border)" }}>
+          <div className="border-t p-5 lg:p-6" style={{ borderColor: "var(--border)" }}>
             {hasTaxonomy && (
               <div className="flex gap-2">
                 <button
