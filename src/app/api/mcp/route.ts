@@ -6,6 +6,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { embedQuery, isEmbeddingConfigured } from "@/lib/embeddings";
 import { buildItemBrief, buildBoardBrief } from "@/lib/brief";
 import { ITEM_COLUMNS, type Item } from "@/lib/types";
+import { itemIdsInCollection } from "@/lib/collections";
 
 // Endpoint MCP (Streamable HTTP, ver spec do Model Context Protocol) que
 // expõe a biblioteca de refs pro Claude Code consumir como contexto de
@@ -88,7 +89,10 @@ function getServer() {
         if (category) dbQuery = dbQuery.eq("category", category);
         if (color) dbQuery = dbQuery.eq("color", color);
         if (tag) dbQuery = dbQuery.contains("tags", [tag]);
-        if (collectionId) dbQuery = dbQuery.eq("collection_id", collectionId);
+        if (collectionId) {
+          const ids = await itemIdsInCollection(supabase, collectionId);
+          dbQuery = dbQuery.in("id", ids.length > 0 ? ids : ["00000000-0000-0000-0000-000000000000"]);
+        }
         const { data, error } = await dbQuery;
         if (error) return { content: [{ type: "text", text: `Erro na busca: ${error.message}` }], isError: true };
         items = (data ?? []) as Item[];
@@ -146,7 +150,10 @@ function getServer() {
       let dbQuery = supabase.from("items").select(ITEM_COLUMNS).order("created_at", { ascending: false }).limit(500);
       if (tag) dbQuery = dbQuery.contains("tags", [tag]);
       if (category) dbQuery = dbQuery.eq("category", category);
-      if (collectionId) dbQuery = dbQuery.eq("collection_id", collectionId);
+      if (collectionId) {
+        const ids = await itemIdsInCollection(supabase, collectionId);
+        dbQuery = dbQuery.in("id", ids.length > 0 ? ids : ["00000000-0000-0000-0000-000000000000"]);
+      }
 
       const { data, error } = await dbQuery;
       if (error) return { content: [{ type: "text", text: error.message }], isError: true };

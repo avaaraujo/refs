@@ -6,6 +6,7 @@ import { captureScreenshot, DEFAULT_CAPTURE_DELAY } from "@/lib/screenshot";
 import { getAuthedUser } from "@/lib/supabase/server";
 import { embedItem, isEmbeddingConfigured } from "@/lib/embeddings";
 import { ITEM_COLUMNS } from "@/lib/types";
+import { attachCollectionIdsToOne } from "@/lib/collections";
 
 // captura (com delay) + tagging por IA passam bem dos 10s padrão
 export const maxDuration = 60;
@@ -119,5 +120,5 @@ export async function POST(
   // só agora o print antigo é descartável; falhar aqui não invalida a recaptura
   await supabase.storage.from("refs").remove([item.image_path]);
 
-  return NextResponse.json({ item: data });
+  return NextResponse.json({ item: await attachCollectionIdsToOne(supabase, data) });
 }

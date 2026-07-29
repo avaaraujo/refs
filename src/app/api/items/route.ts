@@ -8,6 +8,7 @@ import { normalizeUrl } from "@/lib/normalizeUrl";
 import { getAuthedUser } from "@/lib/supabase/server";
 import { embedItem, isEmbeddingConfigured } from "@/lib/embeddings";
 import { ITEM_COLUMNS } from "@/lib/types";
+import { attachCollectionIds, attachCollectionIdsToOne, itemIdsInCollection } from "@/lib/collections";
 
 export async function GET(req: NextRequest) {
   const tag = req.nextUrl.searchParams.get("tag");
@@ -29,12 +30,15 @@ export async function GET(req: NextRequest) {
   if (category) query = query.eq("category", category);
   if (style) query = query.contains("style", [style]);
   if (color) query = query.eq("color", color);
-  if (collectionId) query = query.eq("collection_id", collectionId);
+  if (collectionId) {
+    const ids = await itemIdsInCollection(supabase, collectionId);
+    query = query.in("id", ids.length > 0 ? ids : ["00000000-0000-0000-0000-000000000000"]);
+  }
   if (q) query = query.or(`title.ilike.%${q}%,description.ilike.%${q}%`);
 
   const { data, error } = await query;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ items: data });
+  return NextResponse.json({ items: await attachCollectionIds(supabase, data ?? []) });
 }
 
 export async function POST(req: NextRequest) {
@@ -148,5 +152,5 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: insertError.message }, { status: 500 });
   }
 
-  return NextResponse.json({ item: data }, { status: 201 });
+  return NextResponse.json({ item: await attachCollectionIdsToOne(supabase, data) }, { status: 201 });
 }

@@ -37,11 +37,9 @@ export async function DELETE(
 
   const { id } = await params;
   const supabase = createAdminClient();
-  // itens da coleção não são apagados: collection_id só volta a null (FK
-  // "on delete set null" na migration cobre isso automaticamente, mas fazemos
-  // explícito aqui também pra não depender só do comportamento do banco caso
-  // a coluna mude no futuro)
-  await supabase.from("items").update({ collection_id: null }).eq("collection_id", id);
+  // itens não são apagados: a linha em item_collections é que some, via
+  // "on delete cascade" na FK (ver migration_006) — os itens continuam,
+  // só deixam de pertencer a essa coleção
   const { error } = await supabase.from("collections").delete().eq("id", id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ ok: true });

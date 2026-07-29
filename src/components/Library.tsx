@@ -127,7 +127,7 @@ export default function Library() {
       if (activeCategory && item.category !== activeCategory) return false;
       if (activeStyle && !item.style.includes(activeStyle)) return false;
       if (activeColor && item.color !== activeColor) return false;
-      if (activeCollection && item.collection_id !== activeCollection) return false;
+      if (activeCollection && !item.collection_ids.includes(activeCollection)) return false;
       if (semanticMode) {
         if (search.trim() && semanticIds && !semanticIds.includes(item.id)) return false;
       } else if (search.trim()) {

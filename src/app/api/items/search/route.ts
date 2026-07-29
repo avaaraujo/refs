@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { embedQuery, isEmbeddingConfigured } from "@/lib/embeddings";
 import { ITEM_COLUMNS } from "@/lib/types";
+import { attachCollectionIds } from "@/lib/collections";
 
 // busca semântica: embeda a query e ordena por similaridade via a função
 // SQL match_items (ver supabase/migration_005_embeddings.sql). Usado tanto
@@ -48,8 +49,9 @@ export async function POST(req: NextRequest) {
   const { data: items, error: itemsError } = await supabase.from("items").select(ITEM_COLUMNS).in("id", ids);
   if (itemsError) return NextResponse.json({ error: itemsError.message }, { status: 500 });
 
+  const withCollections = await attachCollectionIds(supabase, items ?? []);
   // supabase não preserva a ordem do `in()` — reordena pela similaridade
-  const byId = new Map((items ?? []).map((i) => [i.id, i]));
+  const byId = new Map(withCollections.map((i) => [i.id, i]));
   const ordered = ids.map((id) => byId.get(id)).filter(Boolean);
 
   return NextResponse.json({ items: ordered });

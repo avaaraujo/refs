@@ -136,7 +136,7 @@ export default function DetailModal({
 
   const hasTaxonomy = item.style.length > 0 || Boolean(item.color) || item.tech.length > 0 || item.tags.length > 0;
   const hasRecipe = (item.recipe_tags?.length ?? 0) > 0;
-  const hasInfo = Boolean(item.description) || authed || Boolean(notes) || Boolean(item.collection_id);
+  const hasInfo = Boolean(item.description) || authed || Boolean(notes) || item.collection_ids.length > 0;
   const swatches = colorSwatches(item.color);
 
   const taxonomyMeta = [
@@ -207,13 +207,16 @@ export default function DetailModal({
     }
   }
 
-  async function assignCollection(collectionId: string | null) {
+  async function toggleCollection(collectionId: string) {
+    const next = item!.collection_ids.includes(collectionId)
+      ? item!.collection_ids.filter((id) => id !== collectionId)
+      : [...item!.collection_ids, collectionId];
     setSavingCollection(true);
     try {
       const res = await fetch(`/api/items/${item!.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ collection_id: collectionId }),
+        body: JSON.stringify({ collection_ids: next }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error);
@@ -363,29 +366,47 @@ export default function DetailModal({
                     )}
                   </div>
                 )}
-                {(authed || item.collection_id) && (
+                {(authed || item.collection_ids.length > 0) && (
                   <div className={item.description || notes ? "mt-4" : ""}>
                     <p className="mb-2 text-xs font-medium uppercase tracking-wide" style={{ color: "var(--muted)" }}>
-                      Coleção
+                      Coleções
                     </p>
                     {authed ? (
-                      <select
-                        value={item.collection_id ?? ""}
-                        onChange={(e) => assignCollection(e.target.value || null)}
-                        disabled={savingCollection}
-                        aria-label="Coleção"
-                        className="w-full rounded-lg border bg-transparent px-2.5 py-2 text-sm outline-none disabled:opacity-50"
-                        style={{ borderColor: "var(--border)" }}
-                      >
-                        <option value="">Sem coleção</option>
-                        {collections.map((c) => (
-                          <option key={c.id} value={c.id}>
-                            {c.name}
-                          </option>
-                        ))}
-                      </select>
+                      collections.length === 0 ? (
+                        <p className="text-sm" style={{ color: "var(--muted)" }}>
+                          Nenhuma coleção criada ainda.
+                        </p>
+                      ) : (
+                        <div className="flex flex-wrap gap-1.5">
+                          {collections.map((c) => {
+                            const active = item.collection_ids.includes(c.id);
+                            return (
+                              <button
+                                key={c.id}
+                                type="button"
+                                onClick={() => toggleCollection(c.id)}
+                                disabled={savingCollection}
+                                aria-pressed={active}
+                                className="rounded-full border px-2.5 py-1 text-xs transition disabled:opacity-50"
+                                style={{
+                                  borderColor: active ? "var(--accent)" : "var(--border)",
+                                  background: active ? "var(--accent)" : "transparent",
+                                  color: active ? "var(--on-accent)" : "var(--muted)",
+                                }}
+                              >
+                                {c.name}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )
                     ) : (
-                      <p className="text-sm">{collections.find((c) => c.id === item.collection_id)?.name}</p>
+                      <p className="text-sm">
+                        {collections
+                          .filter((c) => item.collection_ids.includes(c.id))
+                          .map((c) => c.name)
+                          .join(", ")}
+                      </p>
                     )}
                   </div>
                 )}

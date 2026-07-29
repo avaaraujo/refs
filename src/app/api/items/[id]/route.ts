@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getAuthedUser } from "@/lib/supabase/server";
 import { ITEM_COLUMNS } from "@/lib/types";
+import { attachCollectionIdsToOne, setItemCollections } from "@/lib/collections";
 
 export async function DELETE(
   _req: NextRequest,
@@ -50,8 +51,15 @@ export async function PATCH(
   if (Array.isArray(body.tags)) update.tags = body.tags;
   if (typeof body.title === "string") update.title = body.title;
   if (typeof body.notes === "string") update.notes = body.notes;
-  if (typeof body.collection_id === "string" || body.collection_id === null) {
-    update.collection_id = body.collection_id;
+
+  if (Array.isArray(body.collection_ids)) {
+    await setItemCollections(supabase, id, body.collection_ids as string[]);
+  }
+
+  if (Object.keys(update).length === 0) {
+    const { data, error } = await supabase.from("items").select(ITEM_COLUMNS).eq("id", id).single();
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ item: await attachCollectionIdsToOne(supabase, data) });
   }
 
   const { data, error } = await supabase
@@ -62,5 +70,5 @@ export async function PATCH(
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ item: data });
+  return NextResponse.json({ item: await attachCollectionIdsToOne(supabase, data) });
 }
