@@ -20,15 +20,17 @@ Diferente de um board genérico (Pinterest, Are.na), o pipeline é feito para co
 
 ## Operating Context
 
-Fluxo de uso: colar um link (o print é capturado automaticamente do site) ou enviar um print manualmente, com nota opcional -> IA gera título, descrição, categoria, estilo, cor, tags e recipe -> item entra na grade masonry da biblioteca. Navegação por busca textual/semântica, filtro de tags/categoria/cor/coleção. Itens podem ser agrupados numa coleção nomeada (ex: "direção do ava.cheap"). Autenticação simples (email+senha via Supabase Auth) só é necessária para adicionar/apagar/organizar; a biblioteca é visível sem login. O acervo também é consultável programaticamente por um agente (Claude Code) via o endpoint MCP.
+Fluxo de uso: colar um link (o print é capturado automaticamente do site) ou enviar um print manualmente, com nota opcional -> IA gera título, descrição, categoria, estilo, cor, paleta, tags e recipe -> item entra na grade masonry da biblioteca. Navegação por busca textual/semântica, filtro de tags/categoria/estilo/cor/coleção. Itens podem pertencer a várias coleções nomeadas ao mesmo tempo (ex: "direção do ava.cheap" e "estudo de dashboards"), e podem ter múltiplos prints (hero, pricing, footer do mesmo site). Autenticação simples (email+senha via Supabase Auth) só é necessária para adicionar/apagar/organizar; a biblioteca é visível sem login. O acervo também é consultável programaticamente por um agente (Claude Code) via o endpoint MCP.
 
 ## Capabilities and Constraints
 
-- Stack: Next.js 16 + React 19 + Tailwind v4, Supabase (Postgres + Storage + Auth), Anthropic SDK (claude-sonnet-5) para tagging de imagem, Voyage AI (voyage-3-lite) para embeddings de busca semântica.
+- Stack: Next.js 16 + React 19 + Tailwind v4, Supabase (Postgres + Storage + Auth), Anthropic SDK (claude-sonnet-5) para tagging de imagem, Voyage AI (voyage-3-lite) para embeddings de busca semântica, sharp para extração de paleta.
 - Captura de screenshot automática a partir de URL (`src/lib/screenshot.ts`); upload manual de imagem como alternativa.
-- Tagging por IA roda na criação do item; re-tagging em lote disponível (`/api/items/retag-all`, botão na Library) pra atualizar o acervo depois de melhorar o prompt de tagging.
+- Tagging por IA roda na criação do item; re-tagging em lote disponível (`/api/items/retag-all`, botão na Library) pra atualizar o acervo depois de melhorar o prompt de tagging — também faz backfill de embedding e paleta sem re-rodar a IA quando só isso falta.
 - Busca semântica via embedding do texto do item (Voyage AI, `src/lib/embeddings.ts` + `supabase/migration_005_embeddings.sql`) — precisa de `VOYAGE_API_KEY`; sem a chave, a busca cai pra substring simples.
-- Coleções nomeadas (`collections` table, `items.collection_id`) agrupam itens por projeto/intenção, complementando as tags geradas por IA.
+- Paleta real em hex extraída do print via sharp (`src/lib/palette.ts`, coluna `items.palette`) — diferente de `color`, que é a descrição textual gerada pela IA. Swatches clicáveis copiam o hex.
+- Coleções nomeadas, many-to-many (tabela de junção `item_collections`, ver `src/lib/collections.ts`) — um item pode estar em várias coleções ao mesmo tempo, complementando as tags geradas por IA.
+- Múltiplos prints por item (tabela `item_images`, ver `src/lib/itemImages.ts`) — `items.image_path` continua sendo o print de capa; a galeria adicional aparece como tira de miniaturas no modal de detalhe.
 - Endpoint MCP (`/api/mcp`, Streamable HTTP) expõe a biblioteca pra qualquer cliente MCP (Claude Code) com as tools `search_refs`, `get_item_brief`, `get_board_brief`, `list_collections`, `list_tags` — leitura só, sem auth, já que a biblioteca é pública pra leitura.
 - Single-user: sem RLS no banco ainda (comentado no schema.sql como decisão deliberada, "por enquanto").
 - Bucket de storage público (`refs`) para os prints.
