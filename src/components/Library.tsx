@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -22,6 +22,7 @@ import ItemCard from "./ItemCard";
 import type { Item, Collection } from "@/lib/types";
 import { createClient } from "@/lib/supabase/client";
 import { buildBoardBrief } from "@/lib/brief";
+import { closestDistance } from "@/lib/colorDistance";
 
 export default function Library() {
   const [items, setItems] = useState<Item[]>([]);
@@ -33,8 +34,15 @@ export default function Library() {
   const [activeTag, setActiveTag] = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [activeStyle, setActiveStyle] = useState<string | null>(null);
-  const [activeColor, setActiveColor] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+
+  // busca por cor: em vez de bater o texto gerado pela IA ("Black & Silver"
+  // nunca vai casar com "Black & White" por string), compara a cor escolhida
+  // no picker contra a paleta hex real de cada item (ver lib/colorDistance.ts)
+  // — colorTolerance é o raio de tolerância em ΔE (quanto maior, mais frouxo)
+  const [pickedColor, setPickedColor] = useState<string | null>(null);
+  const [colorTolerance, setColorTolerance] = useState(30);
+  const colorInputRef = useRef<HTMLInputElement>(null);
 
   const [collections, setCollections] = useState<Collection[]>([]);
   const [activeCollection, setActiveCollection] = useState<string | null>(null);
@@ -140,18 +148,12 @@ export default function Library() {
     return [...set].sort();
   }, [items]);
 
-  const allColors = useMemo(() => {
-    const set = new Set<string>();
-    for (const item of items) if (item.color) set.add(item.color);
-    return [...set].sort();
-  }, [items]);
-
   const filtered = useMemo(() => {
     return items.filter((item) => {
       if (activeTag && !item.tags.includes(activeTag)) return false;
       if (activeCategory && item.category !== activeCategory) return false;
       if (activeStyle && !item.style.includes(activeStyle)) return false;
-      if (activeColor && item.color !== activeColor) return false;
+      if (pickedColor && closestDistance(pickedColor, item.palette) > colorTolerance) return false;
       if (activeCollection && !item.collection_ids.includes(activeCollection)) return false;
       if (semanticMode) {
         if (search.trim() && semanticIds && !semanticIds.includes(item.id)) return false;
@@ -162,7 +164,18 @@ export default function Library() {
       }
       return true;
     });
-  }, [items, activeTag, activeCategory, activeStyle, activeColor, activeCollection, search, semanticMode, semanticIds]);
+  }, [
+    items,
+    activeTag,
+    activeCategory,
+    activeStyle,
+    pickedColor,
+    colorTolerance,
+    activeCollection,
+    search,
+    semanticMode,
+    semanticIds,
+  ]);
 
   async function handleDelete(id: string) {
     setItems((prev) => prev.filter((i) => i.id !== id));
@@ -184,6 +197,7 @@ export default function Library() {
       activeTag ? `tag: ${activeTag}` : null,
       activeCategory,
       activeStyle,
+      pickedColor ? `cor próxima de ${pickedColor}` : null,
       search.trim() ? `busca: "${search.trim()}"` : null,
     ].filter(Boolean);
     const scopeLabel = scopeParts.length > 0 ? scopeParts.join(", ") : undefined;
@@ -363,20 +377,60 @@ export default function Library() {
             ))}
           </select>
 
-          <select
-            value={activeColor ?? ""}
-            onChange={(e) => setActiveColor(e.target.value || null)}
-            aria-label="Filtrar por paleta de cor"
-            className="rounded-xl border bg-transparent px-2.5 py-2 text-sm outline-none"
-            style={{ borderColor: "var(--border)", color: "var(--muted)" }}
+          <div
+            className="flex items-center gap-1.5 rounded-xl border px-2.5 py-2"
+            style={{ borderColor: "var(--border)" }}
           >
-            <option value="">Cor</option>
-            {allColors.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </select>
+            <button
+              type="button"
+              onClick={() => colorInputRef.current?.click()}
+              aria-label="Escolher cor pra buscar referências parecidas"
+              title="Buscar por cor próxima (não precisa ser exata)"
+              className="h-4 w-4 shrink-0 rounded-full border"
+              style={{
+                background: pickedColor ?? "transparent",
+                borderColor: pickedColor ? "var(--border)" : "var(--muted)",
+                backgroundImage: pickedColor
+                  ? undefined
+                  : "linear-gradient(45deg, var(--muted) 25%, transparent 25%, transparent 75%, var(--muted) 75%), linear-gradient(45deg, var(--muted) 25%, transparent 25%, transparent 75%, var(--muted) 75%)",
+                backgroundSize: pickedColor ? undefined : "6px 6px",
+                backgroundPosition: pickedColor ? undefined : "0 0, 3px 3px",
+                opacity: pickedColor ? 1 : 0.4,
+              }}
+            />
+            <input
+              ref={colorInputRef}
+              type="color"
+              value={pickedColor ?? "#000000"}
+              onChange={(e) => setPickedColor(e.target.value)}
+              aria-label="Cor pra busca por proximidade"
+              className="sr-only"
+            />
+            <span className="text-sm" style={{ color: "var(--muted)" }}>
+              Cor
+            </span>
+            {pickedColor && (
+              <>
+                <input
+                  type="range"
+                  min={10}
+                  max={60}
+                  value={colorTolerance}
+                  onChange={(e) => setColorTolerance(Number(e.target.value))}
+                  aria-label="Sensibilidade da busca por cor"
+                  title="Quanto maior, mais tons parecidos entram no resultado"
+                  className="w-16 accent-[var(--accent)]"
+                />
+                <button
+                  onClick={() => setPickedColor(null)}
+                  aria-label="Limpar filtro de cor"
+                  className="shrink-0 opacity-60 hover:opacity-100"
+                >
+                  <X size={12} />
+                </button>
+              </>
+            )}
+          </div>
 
           {(collections.length > 0 || authed) && (
             <div className="flex items-center gap-1">
