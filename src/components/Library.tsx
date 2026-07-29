@@ -3,12 +3,22 @@
 import { useEffect, useMemo, useState } from "react";
 import { flushSync } from "react-dom";
 import { toast } from "sonner";
-import { Plus, MagnifyingGlass, ClipboardText, X, Lock, LockOpen } from "@phosphor-icons/react/dist/ssr";
+import {
+  Plus,
+  MagnifyingGlass,
+  ClipboardText,
+  X,
+  Lock,
+  LockOpen,
+  Sparkle,
+  FolderSimple,
+  ArrowsClockwise,
+} from "@phosphor-icons/react/dist/ssr";
 import AddModal from "./AddModal";
 import DetailModal from "./DetailModal";
 import LoginModal from "./LoginModal";
 import ItemCard from "./ItemCard";
-import type { Item } from "@/lib/types";
+import type { Item, Collection } from "@/lib/types";
 import { createClient } from "@/lib/supabase/client";
 import { buildBoardBrief } from "@/lib/brief";
 
@@ -20,7 +30,18 @@ export default function Library() {
   const [authed, setAuthed] = useState(false);
   const [activeItem, setActiveItem] = useState<Item | null>(null);
   const [activeTag, setActiveTag] = useState<string | null>(null);
+  const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [activeColor, setActiveColor] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+
+  const [collections, setCollections] = useState<Collection[]>([]);
+  const [activeCollection, setActiveCollection] = useState<string | null>(null);
+
+  const [semanticMode, setSemanticMode] = useState(false);
+  const [semanticIds, setSemanticIds] = useState<string[] | null>(null);
+  const [semanticLoading, setSemanticLoading] = useState(false);
+
+  const [retagging, setRetagging] = useState(false);
 
   async function load() {
     setLoading(true);
@@ -30,8 +51,15 @@ export default function Library() {
     setLoading(false);
   }
 
+  async function loadCollections() {
+    const res = await fetch("/api/collections");
+    const json = await res.json();
+    setCollections(json.collections ?? []);
+  }
+
   useEffect(() => {
     load();
+    loadCollections();
     const supabase = createClient();
     supabase.auth.getUser().then(({ data }) => setAuthed(Boolean(data.user)));
     const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -39,6 +67,32 @@ export default function Library() {
     });
     return () => sub.subscription.unsubscribe();
   }, []);
+
+  // busca semântica: roda em paralelo à busca textual (debounced) só quando
+  // o modo está ligado — os resultados viram um filtro de ids (ver `filtered`)
+  useEffect(() => {
+    if (!semanticMode || !search.trim()) return;
+    const q = search.trim();
+    const handle = setTimeout(async () => {
+      setSemanticLoading(true);
+      try {
+        const res = await fetch("/api/items/search", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ q, limit: 60 }),
+        });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error);
+        setSemanticIds((json.items as Item[]).map((i) => i.id));
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "Busca semântica falhou.");
+        setSemanticMode(false);
+      } finally {
+        setSemanticLoading(false);
+      }
+    }, 400);
+    return () => clearTimeout(handle);
+  }, [semanticMode, search]);
 
   const allTags = useMemo(() => {
     const counts = new Map<string, number>();
@@ -48,17 +102,34 @@ export default function Library() {
     return [...counts.entries()].sort((a, b) => b[1] - a[1]);
   }, [items]);
 
+  const allCategories = useMemo(() => {
+    const set = new Set<string>();
+    for (const item of items) if (item.category) set.add(item.category);
+    return [...set].sort();
+  }, [items]);
+
+  const allColors = useMemo(() => {
+    const set = new Set<string>();
+    for (const item of items) if (item.color) set.add(item.color);
+    return [...set].sort();
+  }, [items]);
+
   const filtered = useMemo(() => {
     return items.filter((item) => {
       if (activeTag && !item.tags.includes(activeTag)) return false;
-      if (search.trim()) {
+      if (activeCategory && item.category !== activeCategory) return false;
+      if (activeColor && item.color !== activeColor) return false;
+      if (activeCollection && item.collection_id !== activeCollection) return false;
+      if (semanticMode) {
+        if (search.trim() && semanticIds && !semanticIds.includes(item.id)) return false;
+      } else if (search.trim()) {
         const q = search.trim().toLowerCase();
         const haystack = `${item.title ?? ""} ${item.description ?? ""} ${item.tags.join(" ")}`.toLowerCase();
         if (!haystack.includes(q)) return false;
       }
       return true;
     });
-  }, [items, activeTag, search]);
+  }, [items, activeTag, activeCategory, activeColor, activeCollection, search, semanticMode, semanticIds]);
 
   async function handleDelete(id: string) {
     setItems((prev) => prev.filter((i) => i.id !== id));
@@ -75,12 +146,60 @@ export default function Library() {
   }
 
   async function copyBoardBrief() {
-    const scopeLabel = activeTag ? `tag: ${activeTag}` : search.trim() ? `busca: "${search.trim()}"` : undefined;
+    const scopeParts = [
+      activeCollection ? collections.find((c) => c.id === activeCollection)?.name : null,
+      activeTag ? `tag: ${activeTag}` : null,
+      activeCategory,
+      search.trim() ? `busca: "${search.trim()}"` : null,
+    ].filter(Boolean);
+    const scopeLabel = scopeParts.length > 0 ? scopeParts.join(", ") : undefined;
     try {
       await navigator.clipboard.writeText(buildBoardBrief(filtered, scopeLabel));
       toast.success(`Brief do board copiado (${filtered.length} ite${filtered.length === 1 ? "m" : "ns"}).`);
     } catch {
       toast.error("Erro ao copiar brief.");
+    }
+  }
+
+  async function createCollection() {
+    const name = window.prompt("Nome da nova coleção:")?.trim();
+    if (!name) return;
+    try {
+      const res = await fetch("/api/collections", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error);
+      setCollections((prev) => [...prev, json.collection].sort((a, b) => a.name.localeCompare(b.name)));
+      setActiveCollection(json.collection.id);
+      toast.success("Coleção criada.");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Erro ao criar coleção.");
+    }
+  }
+
+  async function retagAll() {
+    setRetagging(true);
+    try {
+      const res = await fetch("/api/items/retag-all", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ scope: "missing" }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error);
+      toast.success(
+        json.processed === 0
+          ? "Acervo já está todo taggeado."
+          : `${json.processed} referência${json.processed === 1 ? "" : "s"} re-taggeada${json.processed === 1 ? "" : "s"}${json.failed ? ` (${json.failed} falhas)` : ""}.`,
+      );
+      await load();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Erro ao re-taggear.");
+    } finally {
+      setRetagging(false);
     }
   }
 
@@ -170,7 +289,7 @@ export default function Library() {
             {items.length} referência{items.length === 1 ? "" : "s"} salvas
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <div
             className="flex items-center gap-2 rounded-xl border px-3 py-2"
             style={{ borderColor: "var(--border)" }}
@@ -179,11 +298,86 @@ export default function Library() {
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Buscar..."
+              placeholder={semanticMode ? "Buscar por descrição..." : "Buscar..."}
               aria-label="Buscar referências"
               className="w-40 bg-transparent text-sm outline-none sm:w-56"
             />
+            <button
+              onClick={() => setSemanticMode((v) => !v)}
+              aria-label="Alternar busca semântica"
+              aria-pressed={semanticMode}
+              title={semanticMode ? "Busca semântica ligada" : "Busca por texto exato"}
+              className="shrink-0 rounded-md p-1 transition"
+              style={{ color: semanticMode ? "var(--accent)" : "var(--muted)" }}
+            >
+              <Sparkle
+                size={14}
+                weight={semanticMode ? "fill" : "regular"}
+                className={semanticLoading ? "animate-pulse" : undefined}
+              />
+            </button>
           </div>
+
+          <select
+            value={activeCategory ?? ""}
+            onChange={(e) => setActiveCategory(e.target.value || null)}
+            aria-label="Filtrar por categoria"
+            className="rounded-xl border bg-transparent px-2.5 py-2 text-sm outline-none"
+            style={{ borderColor: "var(--border)", color: "var(--muted)" }}
+          >
+            <option value="">Categoria</option>
+            {allCategories.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={activeColor ?? ""}
+            onChange={(e) => setActiveColor(e.target.value || null)}
+            aria-label="Filtrar por paleta de cor"
+            className="rounded-xl border bg-transparent px-2.5 py-2 text-sm outline-none"
+            style={{ borderColor: "var(--border)", color: "var(--muted)" }}
+          >
+            <option value="">Cor</option>
+            {allColors.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
+
+          {(collections.length > 0 || authed) && (
+            <div className="flex items-center gap-1">
+              <select
+                value={activeCollection ?? ""}
+                onChange={(e) => setActiveCollection(e.target.value || null)}
+                aria-label="Filtrar por coleção"
+                className="rounded-xl border bg-transparent px-2.5 py-2 text-sm outline-none"
+                style={{ borderColor: "var(--border)", color: "var(--muted)" }}
+              >
+                <option value="">Coleção</option>
+                {collections.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+              {authed && (
+                <button
+                  onClick={createCollection}
+                  aria-label="Nova coleção"
+                  title="Nova coleção"
+                  className="rounded-xl border p-2 transition hover:border-[var(--accent)] hover:text-[var(--accent)]"
+                  style={{ borderColor: "var(--border)", color: "var(--muted)" }}
+                >
+                  <FolderSimple size={16} />
+                </button>
+              )}
+            </div>
+          )}
+
           {!loading && filtered.length > 0 && (
             <button
               onClick={copyBoardBrief}
@@ -198,6 +392,16 @@ export default function Library() {
           )}
           {authed ? (
             <>
+              <button
+                onClick={retagAll}
+                disabled={retagging}
+                aria-label="Re-taggear acervo"
+                title="Re-taggear itens sem recipe/embedding atualizados"
+                className="rounded-xl border p-2.5 opacity-60 hover:opacity-100 disabled:opacity-30"
+                style={{ borderColor: "var(--border)" }}
+              >
+                <ArrowsClockwise size={16} className={retagging ? "animate-spin" : undefined} />
+              </button>
               <button
                 onClick={() => setModalOpen(true)}
                 className="flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-medium transition hover:brightness-90"
@@ -293,6 +497,7 @@ export default function Library() {
       <DetailModal
         item={activeItem}
         authed={authed}
+        collections={collections}
         onClose={handleCloseDetail}
         onDelete={handleDelete}
         onUpdated={handleUpdated}

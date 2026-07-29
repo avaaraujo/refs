@@ -17,7 +17,7 @@ import { publicImageUrl } from "@/lib/publicUrl";
 import { timeAgo } from "@/lib/timeAgo";
 import { colorSwatches } from "@/lib/colorSwatch";
 import { buildItemBrief } from "@/lib/brief";
-import type { Item } from "@/lib/types";
+import type { Item, Collection } from "@/lib/types";
 
 // linha compacta pra dentro do cluster de taxonomia: sem borda própria,
 // a borda é da própria seção do acordeão que a contém
@@ -87,6 +87,7 @@ function AccordionSection({
 export default function DetailModal({
   item,
   authed,
+  collections,
   onClose,
   onDelete,
   onUpdated,
@@ -96,6 +97,7 @@ export default function DetailModal({
 }: {
   item: Item | null;
   authed: boolean;
+  collections: Collection[];
   onClose: () => void;
   onDelete: (id: string) => void;
   onUpdated: (item: Item) => void;
@@ -105,6 +107,7 @@ export default function DetailModal({
 }) {
   const [notes, setNotes] = useState(item?.notes ?? "");
   const [savingNotes, setSavingNotes] = useState(false);
+  const [savingCollection, setSavingCollection] = useState(false);
   const [recapturing, setRecapturing] = useState(false);
   const [delay, setDelay] = useState(3);
   const [openSection, setOpenSection] = useState<"info" | "taxonomy" | "recipe">("recipe");
@@ -133,7 +136,7 @@ export default function DetailModal({
 
   const hasTaxonomy = item.style.length > 0 || Boolean(item.color) || item.tech.length > 0 || item.tags.length > 0;
   const hasRecipe = (item.recipe_tags?.length ?? 0) > 0;
-  const hasInfo = Boolean(item.description) || authed || Boolean(notes);
+  const hasInfo = Boolean(item.description) || authed || Boolean(notes) || Boolean(item.collection_id);
   const swatches = colorSwatches(item.color);
 
   const taxonomyMeta = [
@@ -201,6 +204,24 @@ export default function DetailModal({
       toast.error("Erro ao salvar notas.");
     } finally {
       setSavingNotes(false);
+    }
+  }
+
+  async function assignCollection(collectionId: string | null) {
+    setSavingCollection(true);
+    try {
+      const res = await fetch(`/api/items/${item!.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ collection_id: collectionId }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error);
+      onUpdated(json.item);
+    } catch {
+      toast.error("Erro ao mudar coleção.");
+    } finally {
+      setSavingCollection(false);
     }
   }
 
@@ -339,6 +360,32 @@ export default function DetailModal({
                       </div>
                     ) : (
                       <p className="text-sm">{notes}</p>
+                    )}
+                  </div>
+                )}
+                {(authed || item.collection_id) && (
+                  <div className={item.description || notes ? "mt-4" : ""}>
+                    <p className="mb-2 text-xs font-medium uppercase tracking-wide" style={{ color: "var(--muted)" }}>
+                      Coleção
+                    </p>
+                    {authed ? (
+                      <select
+                        value={item.collection_id ?? ""}
+                        onChange={(e) => assignCollection(e.target.value || null)}
+                        disabled={savingCollection}
+                        aria-label="Coleção"
+                        className="w-full rounded-lg border bg-transparent px-2.5 py-2 text-sm outline-none disabled:opacity-50"
+                        style={{ borderColor: "var(--border)" }}
+                      >
+                        <option value="">Sem coleção</option>
+                        {collections.map((c) => (
+                          <option key={c.id} value={c.id}>
+                            {c.name}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <p className="text-sm">{collections.find((c) => c.id === item.collection_id)?.name}</p>
                     )}
                   </div>
                 )}

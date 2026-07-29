@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getAuthedUser } from "@/lib/supabase/server";
+import { ITEM_COLUMNS } from "@/lib/types";
 
 export async function DELETE(
   _req: NextRequest,
@@ -49,12 +50,15 @@ export async function PATCH(
   if (Array.isArray(body.tags)) update.tags = body.tags;
   if (typeof body.title === "string") update.title = body.title;
   if (typeof body.notes === "string") update.notes = body.notes;
+  if (typeof body.collection_id === "string" || body.collection_id === null) {
+    update.collection_id = body.collection_id;
+  }
 
   const { data, error } = await supabase
     .from("items")
     .update(update)
     .eq("id", id)
-    .select("*")
+    .select(ITEM_COLUMNS)
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

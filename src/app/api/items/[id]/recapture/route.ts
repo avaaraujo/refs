@@ -4,6 +4,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { tagImage } from "@/lib/tagging";
 import { captureScreenshot, DEFAULT_CAPTURE_DELAY } from "@/lib/screenshot";
 import { getAuthedUser } from "@/lib/supabase/server";
+import { embedItem, isEmbeddingConfigured } from "@/lib/embeddings";
+import { ITEM_COLUMNS } from "@/lib/types";
 
 // captura (com delay) + tagging por IA passam bem dos 10s padrão
 export const maxDuration = 60;
@@ -81,6 +83,22 @@ export async function POST(
     update.tags = tagging.tags;
     update.recipe_tags = tagging.recipeTags;
     update.site_recipe = tagging.siteRecipe || null;
+
+    if (isEmbeddingConfigured()) {
+      try {
+        update.embedding = await embedItem({
+          title: tagging.title,
+          description: tagging.description,
+          category: tagging.category || null,
+          style: tagging.style,
+          color: tagging.color || null,
+          tags: tagging.tags,
+          recipe_tags: tagging.recipeTags,
+        });
+      } catch (e) {
+        console.error("embedding failed", e);
+      }
+    }
   } catch (e) {
     console.error("re-tagging failed", e);
   }
@@ -89,7 +107,7 @@ export async function POST(
     .from("items")
     .update(update)
     .eq("id", id)
-    .select("*")
+    .select(ITEM_COLUMNS)
     .single();
 
   if (updateError) {

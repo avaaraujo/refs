@@ -6,20 +6,30 @@ import { captureScreenshot, extractDomain } from "@/lib/screenshot";
 import { detectTech } from "@/lib/techDetect";
 import { normalizeUrl } from "@/lib/normalizeUrl";
 import { getAuthedUser } from "@/lib/supabase/server";
+import { embedItem, isEmbeddingConfigured } from "@/lib/embeddings";
+import { ITEM_COLUMNS } from "@/lib/types";
 
 export async function GET(req: NextRequest) {
   const tag = req.nextUrl.searchParams.get("tag");
   const q = req.nextUrl.searchParams.get("q");
+  const category = req.nextUrl.searchParams.get("category");
+  const style = req.nextUrl.searchParams.get("style");
+  const color = req.nextUrl.searchParams.get("color");
+  const collectionId = req.nextUrl.searchParams.get("collection_id");
   const supabase = createAdminClient();
 
   // teto de segurança: sem isso, a query cresce sem limite conforme a
   // biblioteca acumula referências (uso pretendido do produto)
   let query = supabase
     .from("items")
-    .select("*")
+    .select(ITEM_COLUMNS)
     .order("created_at", { ascending: false })
     .range(0, 499);
   if (tag) query = query.contains("tags", [tag]);
+  if (category) query = query.eq("category", category);
+  if (style) query = query.contains("style", [style]);
+  if (color) query = query.eq("color", color);
+  if (collectionId) query = query.eq("collection_id", collectionId);
   if (q) query = query.or(`title.ilike.%${q}%,description.ilike.%${q}%`);
 
   const { data, error } = await query;
@@ -96,6 +106,23 @@ export async function POST(req: NextRequest) {
 
   const tech = url ? await detectTech(url) : [];
 
+  let embedding: number[] | null = null;
+  if (isEmbeddingConfigured()) {
+    try {
+      embedding = await embedItem({
+        title: tagging.title,
+        description: tagging.description,
+        category: tagging.category || null,
+        style: tagging.style,
+        color: tagging.color || null,
+        tags: tagging.tags,
+        recipe_tags: tagging.recipeTags,
+      });
+    } catch (e) {
+      console.error("embedding failed", e);
+    }
+  }
+
   const { data, error: insertError } = await supabase
     .from("items")
     .insert({
@@ -112,8 +139,9 @@ export async function POST(req: NextRequest) {
       recipe_tags: tagging.recipeTags,
       site_recipe: tagging.siteRecipe || null,
       notes,
+      embedding,
     })
-    .select("*")
+    .select(ITEM_COLUMNS)
     .single();
 
   if (insertError) {
