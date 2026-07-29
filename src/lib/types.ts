@@ -8,6 +8,7 @@ export type Item = {
   category: string | null;
   style: string[];
   color: string | null;
+  palette: string[];
   tech: string[];
   tags: string[];
   recipe_tags: string[];
@@ -29,4 +30,4 @@ export type Collection = {
 // tabela de junção item_collections) — quem usa ITEM_COLUMNS precisa anexar
 // collection_ids separadamente (ver lib/collections.ts).
 export const ITEM_COLUMNS =
-  "id, url, source_domain, image_path, title, description, category, style, color, tech, tags, recipe_tags, site_recipe, notes, created_at";
+  "id, url, source_domain, image_path, title, description, category, style, color, palette, tech, tags, recipe_tags, site_recipe, notes, created_at";

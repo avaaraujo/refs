@@ -102,6 +102,13 @@ export default function ItemCard({
             </button>
           )}
         </div>
+        {item.palette.length > 0 && (
+          <div className="absolute bottom-2 left-2 flex gap-1">
+            {item.palette.slice(0, 5).map((hex) => (
+              <i key={hex} className="h-2.5 w-2.5 rounded-full border border-white/40" style={{ background: hex }} />
+            ))}
+          </div>
+        )}
       </div>
       <div className="p-3">
         {item.category && (

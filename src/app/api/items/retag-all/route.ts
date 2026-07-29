@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getAuthedUser } from "@/lib/supabase/server";
 import { tagImage } from "@/lib/tagging";
 import { embedItem, isEmbeddingConfigured } from "@/lib/embeddings";
+import { extractPalette } from "@/lib/palette";
 
 // re-tagging em lote: reprocessa o acervo existente com o prompt de tagging
 // atual (ver lib/tagging.ts) e recomputa o embedding. Útil depois de melhorar
@@ -35,16 +36,16 @@ export async function POST(req: NextRequest) {
 
   let query = supabase
     .from("items")
-    .select("id, image_path, url, title, description, category, style, color, tags, recipe_tags, site_recipe, embedding")
+    .select("id, image_path, url, title, description, category, style, color, palette, tags, recipe_tags, site_recipe, embedding")
     .order("created_at", { ascending: true })
     .limit(limit);
-  // "missing" pega tanto item nunca taggeado com recipe (pré migration_003)
-  // quanto item já taggeado mas sem embedding (pré introdução da busca
-  // semântica) — os dois casos precisam de tratamento diferente abaixo
+  // "missing" pega item nunca taggeado com recipe (pré migration_003), sem
+  // embedding (pré busca semântica) ou sem palette (pré migration_007) —
+  // os três casos têm tratamento independente abaixo
   if (scope === "missing") {
-    query = query.or(
-      isEmbeddingConfigured() ? "recipe_tags.eq.{},site_recipe.is.null,embedding.is.null" : "recipe_tags.eq.{},site_recipe.is.null",
-    );
+    const conditions = ["recipe_tags.eq.{}", "site_recipe.is.null", "palette.eq.{}"];
+    if (isEmbeddingConfigured()) conditions.push("embedding.is.null");
+    query = query.or(conditions.join(","));
   }
 
   const { data: items, error } = await query;
@@ -58,6 +59,7 @@ export async function POST(req: NextRequest) {
   for (const item of items) {
     try {
       const needsTagging = (item.recipe_tags?.length ?? 0) === 0 || !item.site_recipe;
+      const needsPalette = (item.palette?.length ?? 0) === 0;
       const update: Record<string, unknown> = {};
       let embeddingSource = {
         title: item.title,
@@ -69,35 +71,45 @@ export async function POST(req: NextRequest) {
         recipe_tags: item.recipe_tags ?? [],
       };
 
-      if (needsTagging) {
+      if (needsTagging || needsPalette) {
         const { data: file, error: downloadError } = await supabase.storage.from("refs").download(item.image_path);
         if (downloadError || !file) throw new Error(downloadError?.message ?? "download falhou");
         const bytes = Buffer.from(await file.arrayBuffer());
-        const mediaType = mediaTypeFromPath(item.image_path);
 
-        const tagging = await tagImage({
-          imageBase64: bytes.toString("base64"),
-          mediaType,
-          urlHint: item.url ?? undefined,
-        });
+        if (needsPalette) {
+          try {
+            update.palette = await extractPalette(bytes);
+          } catch (e) {
+            console.error("palette extraction failed", item.id, e);
+          }
+        }
 
-        update.title = tagging.title;
-        update.description = tagging.description;
-        update.category = tagging.category || null;
-        update.style = tagging.style;
-        update.color = tagging.color || null;
-        update.tags = tagging.tags;
-        update.recipe_tags = tagging.recipeTags;
-        update.site_recipe = tagging.siteRecipe || null;
-        embeddingSource = {
-          title: tagging.title,
-          description: tagging.description,
-          category: tagging.category || null,
-          style: tagging.style,
-          color: tagging.color || null,
-          tags: tagging.tags,
-          recipe_tags: tagging.recipeTags,
-        };
+        if (needsTagging) {
+          const mediaType = mediaTypeFromPath(item.image_path);
+          const tagging = await tagImage({
+            imageBase64: bytes.toString("base64"),
+            mediaType,
+            urlHint: item.url ?? undefined,
+          });
+
+          update.title = tagging.title;
+          update.description = tagging.description;
+          update.category = tagging.category || null;
+          update.style = tagging.style;
+          update.color = tagging.color || null;
+          update.tags = tagging.tags;
+          update.recipe_tags = tagging.recipeTags;
+          update.site_recipe = tagging.siteRecipe || null;
+          embeddingSource = {
+            title: tagging.title,
+            description: tagging.description,
+            category: tagging.category || null,
+            style: tagging.style,
+            color: tagging.color || null,
+            tags: tagging.tags,
+            recipe_tags: tagging.recipeTags,
+          };
+        }
       }
 
       // recomputa embedding sempre que a tag mudou OU quando ele nunca existiu —

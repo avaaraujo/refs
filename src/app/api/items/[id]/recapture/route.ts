@@ -7,6 +7,7 @@ import { getAuthedUser } from "@/lib/supabase/server";
 import { embedItem, isEmbeddingConfigured } from "@/lib/embeddings";
 import { ITEM_COLUMNS } from "@/lib/types";
 import { attachCollectionIdsToOne } from "@/lib/collections";
+import { extractPalette } from "@/lib/palette";
 
 // captura (com delay) + tagging por IA passam bem dos 10s padrão
 export const maxDuration = 60;
@@ -70,6 +71,11 @@ export async function POST(
   // o print antigo estava errado, então o tagging derivado dele também estava.
   // notes é escrito à mão pelo dono — fica intacto.
   const update: Record<string, unknown> = { image_path: newPath };
+  try {
+    update.palette = await extractPalette(bytes);
+  } catch (e) {
+    console.error("palette extraction failed", e);
+  }
   try {
     const tagging = await tagImage({
       imageBase64: bytes.toString("base64"),

@@ -137,7 +137,19 @@ export default function DetailModal({
   const hasTaxonomy = item.style.length > 0 || Boolean(item.color) || item.tech.length > 0 || item.tags.length > 0;
   const hasRecipe = (item.recipe_tags?.length ?? 0) > 0;
   const hasInfo = Boolean(item.description) || authed || Boolean(notes) || item.collection_ids.length > 0;
-  const swatches = colorSwatches(item.color);
+  // paleta real extraída do print (lib/palette.ts) é preferida sobre a
+  // aproximação por palavra-chave da descrição textual (lib/colorSwatch.ts) —
+  // essa última só cobre itens antigos ainda sem backfill de palette
+  const swatches = item.palette.length > 0 ? item.palette : colorSwatches(item.color);
+
+  async function copyHex(hex: string) {
+    try {
+      await navigator.clipboard.writeText(hex);
+      toast.success(`${hex} copiado.`);
+    } catch {
+      toast.error("Erro ao copiar hex.");
+    }
+  }
 
   const taxonomyMeta = [
     item.style.length > 0 ? `${item.style.length} style` : null,
@@ -435,9 +447,13 @@ export default function DetailModal({
                       {swatches.length > 0 && (
                         <span className="inline-flex shrink-0 gap-1">
                           {swatches.map((hex) => (
-                            <i
+                            <button
                               key={hex}
-                              className="h-3.5 w-3.5 rounded-sm border"
+                              type="button"
+                              onClick={() => copyHex(hex)}
+                              title={`Copiar ${hex}`}
+                              aria-label={`Copiar cor ${hex}`}
+                              className="h-3.5 w-3.5 rounded-sm border transition hover:scale-125"
                               style={{ background: hex, borderColor: "var(--border)" }}
                             />
                           ))}

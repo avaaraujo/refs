@@ -9,6 +9,7 @@ import { getAuthedUser } from "@/lib/supabase/server";
 import { embedItem, isEmbeddingConfigured } from "@/lib/embeddings";
 import { ITEM_COLUMNS } from "@/lib/types";
 import { attachCollectionIds, attachCollectionIdsToOne, itemIdsInCollection } from "@/lib/collections";
+import { extractPalette } from "@/lib/palette";
 
 export async function GET(req: NextRequest) {
   const tag = req.nextUrl.searchParams.get("tag");
@@ -110,6 +111,13 @@ export async function POST(req: NextRequest) {
 
   const tech = url ? await detectTech(url) : [];
 
+  let palette: string[] = [];
+  try {
+    palette = await extractPalette(bytes);
+  } catch (e) {
+    console.error("palette extraction failed", e);
+  }
+
   let embedding: number[] | null = null;
   if (isEmbeddingConfigured()) {
     try {
@@ -138,6 +146,7 @@ export async function POST(req: NextRequest) {
       category: tagging.category || null,
       style: tagging.style,
       color: tagging.color || null,
+      palette,
       tech,
       tags: tagging.tags,
       recipe_tags: tagging.recipeTags,
