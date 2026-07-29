@@ -14,6 +14,8 @@ import {
   Sparkle,
   FolderSimple,
   ArrowsClockwise,
+  Funnel,
+  FunnelX,
 } from "@phosphor-icons/react/dist/ssr";
 import AddModal from "./AddModal";
 import DetailModal from "./DetailModal";
@@ -46,6 +48,7 @@ export default function Library() {
 
   const [collections, setCollections] = useState<Collection[]>([]);
   const [activeCollection, setActiveCollection] = useState<string | null>(null);
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   const [semanticMode, setSemanticMode] = useState(false);
   const [semanticIds, setSemanticIds] = useState<string[] | null>(null);
@@ -147,6 +150,10 @@ export default function Library() {
     for (const item of items) for (const s of item.style) set.add(s);
     return [...set].sort();
   }, [items]);
+
+  const activeFilterCount = [activeCategory, activeStyle, pickedColor, activeCollection].filter(
+    Boolean,
+  ).length;
 
   const filtered = useMemo(() => {
     return items.filter((item) => {
@@ -309,16 +316,17 @@ export default function Library() {
 
   return (
     <div className="px-4 py-8 sm:px-6 lg:px-8">
-      <header className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="font-display text-4xl tracking-tight sm:text-5xl">
-            Refs do Avá<span style={{ color: "var(--accent)" }}>.</span>
-          </h1>
-          <p className="mt-1 text-sm" style={{ color: "var(--muted)" }}>
-            {items.length} referência{items.length === 1 ? "" : "s"} salvas
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
+      <header className="mb-6">
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="mr-auto">
+            <h1 className="font-display text-3xl tracking-tight sm:text-4xl">
+              Refs do Avá<span style={{ color: "var(--accent)" }}>.</span>
+            </h1>
+            <p className="mt-1 text-sm" style={{ color: "var(--muted)" }}>
+              {items.length} referência{items.length === 1 ? "" : "s"} salvas
+            </p>
+          </div>
+
           <div
             className="flex items-center gap-2 rounded-xl border px-3 py-2"
             style={{ borderColor: "var(--border)" }}
@@ -327,9 +335,9 @@ export default function Library() {
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder={semanticMode ? "Buscar por descrição..." : "Buscar..."}
+              placeholder={semanticMode ? "Buscar por descrição..." : "Buscar por título, tag, descrição..."}
               aria-label="Buscar referências"
-              className="w-40 bg-transparent text-sm outline-none sm:w-56"
+              className="w-40 bg-transparent text-sm outline-none sm:w-64"
             />
             <button
               onClick={() => setSemanticMode((v) => !v)}
@@ -347,93 +355,200 @@ export default function Library() {
             </button>
           </div>
 
-          <select
-            value={activeCategory ?? ""}
-            onChange={(e) => setActiveCategory(e.target.value || null)}
-            aria-label="Filtrar por categoria"
-            className="rounded-xl border bg-transparent px-2.5 py-2 text-sm outline-none"
-            style={{ borderColor: "var(--border)", color: "var(--muted)" }}
-          >
-            <option value="">Categoria</option>
-            {allCategories.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </select>
-
-          <select
-            value={activeStyle ?? ""}
-            onChange={(e) => setActiveStyle(e.target.value || null)}
-            aria-label="Filtrar por estilo"
-            className="rounded-xl border bg-transparent px-2.5 py-2 text-sm outline-none"
-            style={{ borderColor: "var(--border)", color: "var(--muted)" }}
-          >
-            <option value="">Estilo</option>
-            {allStyles.map((s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
-            ))}
-          </select>
-
-          <div
-            className="flex items-center gap-1.5 rounded-xl border px-2.5 py-2"
-            style={{ borderColor: "var(--border)" }}
-          >
+          <div className="flex items-center gap-1.5">
             <button
-              type="button"
-              onClick={() => colorInputRef.current?.click()}
-              aria-label="Escolher cor pra buscar referências parecidas"
-              title="Buscar por cor próxima (não precisa ser exata)"
-              className="h-4 w-4 shrink-0 rounded-full border"
+              onClick={() => setFiltersOpen((v) => !v)}
+              aria-label="Filtros"
+              aria-expanded={filtersOpen}
+              title="Filtros"
+              className="relative rounded-xl border p-2.5 transition"
               style={{
-                background: pickedColor ?? "transparent",
-                borderColor: pickedColor ? "var(--border)" : "var(--muted)",
-                backgroundImage: pickedColor
-                  ? undefined
-                  : "linear-gradient(45deg, var(--muted) 25%, transparent 25%, transparent 75%, var(--muted) 75%), linear-gradient(45deg, var(--muted) 25%, transparent 25%, transparent 75%, var(--muted) 75%)",
-                backgroundSize: pickedColor ? undefined : "6px 6px",
-                backgroundPosition: pickedColor ? undefined : "0 0, 3px 3px",
-                opacity: pickedColor ? 1 : 0.4,
+                borderColor: filtersOpen || activeFilterCount > 0 ? "var(--accent)" : "var(--border)",
+                color: filtersOpen || activeFilterCount > 0 ? "var(--accent)" : "var(--muted)",
+                background:
+                  filtersOpen || activeFilterCount > 0
+                    ? "color-mix(in srgb, var(--accent) 12%, transparent)"
+                    : "transparent",
               }}
-            />
-            <input
-              ref={colorInputRef}
-              type="color"
-              value={pickedColor ?? "#000000"}
-              onChange={(e) => setPickedColor(e.target.value)}
-              aria-label="Cor pra busca por proximidade"
-              className="sr-only"
-            />
-            <span className="text-sm" style={{ color: "var(--muted)" }}>
-              Cor
-            </span>
-            {pickedColor && (
-              <>
-                <input
-                  type="range"
-                  min={10}
-                  max={60}
-                  value={colorTolerance}
-                  onChange={(e) => setColorTolerance(Number(e.target.value))}
-                  aria-label="Sensibilidade da busca por cor"
-                  title="Quanto maior, mais tons parecidos entram no resultado"
-                  className="w-16 accent-[var(--accent)]"
-                />
-                <button
-                  onClick={() => setPickedColor(null)}
-                  aria-label="Limpar filtro de cor"
-                  className="shrink-0 opacity-60 hover:opacity-100"
+            >
+              {filtersOpen ? <FunnelX size={16} /> : <Funnel size={16} />}
+              {activeFilterCount > 0 && !filtersOpen && (
+                <span
+                  className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full text-[10px] font-medium"
+                  style={{ background: "var(--accent)", color: "var(--on-accent)" }}
                 >
-                  <X size={12} />
+                  {activeFilterCount}
+                </span>
+              )}
+            </button>
+
+            {(collections.length > 0 || authed) && (
+              <Link
+                href="/colecoes"
+                aria-label="Gerenciar coleções"
+                title="Gerenciar coleções"
+                className="rounded-xl border p-2.5 transition hover:border-[var(--accent)] hover:text-[var(--accent)]"
+                style={{ borderColor: "var(--border)", color: "var(--muted)" }}
+              >
+                <FolderSimple size={16} />
+              </Link>
+            )}
+
+            {!loading && filtered.length > 0 && (
+              <button
+                onClick={copyBoardBrief}
+                aria-label="Copiar brief do board"
+                title="Copiar brief do board"
+                className="rounded-xl border p-2.5 transition hover:border-[var(--accent)] hover:text-[var(--accent)]"
+                style={{ borderColor: "var(--border)", color: "var(--muted)" }}
+              >
+                <ClipboardText size={16} />
+              </button>
+            )}
+
+            {authed ? (
+              <>
+                <button
+                  onClick={retagAll}
+                  disabled={retagging}
+                  aria-label="Re-taggear acervo"
+                  title="Re-taggear itens sem recipe/embedding atualizados"
+                  className="rounded-xl border p-2.5 opacity-60 hover:opacity-100 disabled:opacity-30"
+                  style={{ borderColor: "var(--border)" }}
+                >
+                  <ArrowsClockwise size={16} className={retagging ? "animate-spin" : undefined} />
+                </button>
+                <button
+                  onClick={() => setModalOpen(true)}
+                  aria-label="Adicionar"
+                  title="Adicionar"
+                  className="rounded-xl p-2.5 transition hover:brightness-90"
+                  style={{ background: "var(--accent)", color: "var(--on-accent)" }}
+                >
+                  <Plus size={16} weight="bold" />
+                </button>
+                <button
+                  onClick={handleLogout}
+                  aria-label="Sair"
+                  title="Sair"
+                  className="rounded-xl border p-2.5 opacity-60 hover:opacity-100"
+                  style={{ borderColor: "var(--border)" }}
+                >
+                  <LockOpen size={16} />
                 </button>
               </>
+            ) : (
+              <button
+                onClick={() => setLoginOpen(true)}
+                aria-label="Entrar"
+                title="Entrar"
+                className="rounded-xl border p-2.5 transition hover:border-[var(--accent)] hover:text-[var(--accent)]"
+                style={{ borderColor: "var(--border)", color: "var(--muted)" }}
+              >
+                <Lock size={16} />
+              </button>
             )}
           </div>
+        </div>
 
-          {(collections.length > 0 || authed) && (
-            <div className="flex items-center gap-1">
+        {filtersOpen && (
+          <div
+            className="mt-4 flex flex-wrap items-center gap-2 border-t pt-4"
+            style={{ borderColor: "var(--border)" }}
+          >
+            <span
+              className="mr-1 text-xs font-medium tracking-wide uppercase"
+              style={{ color: "var(--muted)" }}
+            >
+              Filtrar por
+            </span>
+
+            <select
+              value={activeCategory ?? ""}
+              onChange={(e) => setActiveCategory(e.target.value || null)}
+              aria-label="Filtrar por categoria"
+              className="rounded-xl border bg-transparent px-2.5 py-2 text-sm outline-none"
+              style={{ borderColor: "var(--border)", color: "var(--muted)" }}
+            >
+              <option value="">Categoria</option>
+              {allCategories.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+
+            <select
+              value={activeStyle ?? ""}
+              onChange={(e) => setActiveStyle(e.target.value || null)}
+              aria-label="Filtrar por estilo"
+              className="rounded-xl border bg-transparent px-2.5 py-2 text-sm outline-none"
+              style={{ borderColor: "var(--border)", color: "var(--muted)" }}
+            >
+              <option value="">Estilo</option>
+              {allStyles.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </select>
+
+            <div
+              className="flex items-center gap-1.5 rounded-xl border px-2.5 py-2"
+              style={{ borderColor: "var(--border)" }}
+            >
+              <button
+                type="button"
+                onClick={() => colorInputRef.current?.click()}
+                aria-label="Escolher cor pra buscar referências parecidas"
+                title="Buscar por cor próxima (não precisa ser exata)"
+                className="h-4 w-4 shrink-0 rounded-full border"
+                style={{
+                  background: pickedColor ?? "transparent",
+                  borderColor: pickedColor ? "var(--border)" : "var(--muted)",
+                  backgroundImage: pickedColor
+                    ? undefined
+                    : "linear-gradient(45deg, var(--muted) 25%, transparent 25%, transparent 75%, var(--muted) 75%), linear-gradient(45deg, var(--muted) 25%, transparent 25%, transparent 75%, var(--muted) 75%)",
+                  backgroundSize: pickedColor ? undefined : "6px 6px",
+                  backgroundPosition: pickedColor ? undefined : "0 0, 3px 3px",
+                  opacity: pickedColor ? 1 : 0.4,
+                }}
+              />
+              <input
+                ref={colorInputRef}
+                type="color"
+                value={pickedColor ?? "#000000"}
+                onChange={(e) => setPickedColor(e.target.value)}
+                aria-label="Cor pra busca por proximidade"
+                className="sr-only"
+              />
+              <span className="text-sm" style={{ color: "var(--muted)" }}>
+                Cor
+              </span>
+              {pickedColor && (
+                <>
+                  <input
+                    type="range"
+                    min={10}
+                    max={60}
+                    value={colorTolerance}
+                    onChange={(e) => setColorTolerance(Number(e.target.value))}
+                    aria-label="Sensibilidade da busca por cor"
+                    title="Quanto maior, mais tons parecidos entram no resultado"
+                    className="w-16 accent-[var(--accent)]"
+                  />
+                  <button
+                    onClick={() => setPickedColor(null)}
+                    aria-label="Limpar filtro de cor"
+                    className="shrink-0 opacity-60 hover:opacity-100"
+                  >
+                    <X size={12} />
+                  </button>
+                </>
+              )}
+            </div>
+
+            {(collections.length > 0 || authed) && (
               <select
                 value={activeCollection ?? ""}
                 onChange={(e) => setActiveCollection(e.target.value || null)}
@@ -448,70 +563,9 @@ export default function Library() {
                   </option>
                 ))}
               </select>
-              <Link
-                href="/colecoes"
-                aria-label="Gerenciar coleções"
-                title="Gerenciar coleções"
-                className="rounded-xl border p-2 transition hover:border-[var(--accent)] hover:text-[var(--accent)]"
-                style={{ borderColor: "var(--border)", color: "var(--muted)" }}
-              >
-                <FolderSimple size={16} />
-              </Link>
-            </div>
-          )}
-
-          {!loading && filtered.length > 0 && (
-            <button
-              onClick={copyBoardBrief}
-              aria-label="Copiar brief do board"
-              title="Copiar brief do board"
-              className="flex items-center gap-1.5 rounded-xl border px-3 py-2 text-sm transition hover:border-[var(--accent)] hover:text-[var(--accent)]"
-              style={{ borderColor: "var(--border)", color: "var(--muted)" }}
-            >
-              <ClipboardText size={16} />
-              <span className="hidden sm:inline">Brief do board</span>
-            </button>
-          )}
-          {authed ? (
-            <>
-              <button
-                onClick={retagAll}
-                disabled={retagging}
-                aria-label="Re-taggear acervo"
-                title="Re-taggear itens sem recipe/embedding atualizados"
-                className="rounded-xl border p-2.5 opacity-60 hover:opacity-100 disabled:opacity-30"
-                style={{ borderColor: "var(--border)" }}
-              >
-                <ArrowsClockwise size={16} className={retagging ? "animate-spin" : undefined} />
-              </button>
-              <button
-                onClick={() => setModalOpen(true)}
-                className="flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-medium transition hover:brightness-90"
-                style={{ background: "var(--accent)", color: "var(--on-accent)" }}
-              >
-                <Plus size={16} weight="bold" />
-                Adicionar
-              </button>
-              <button
-                onClick={handleLogout}
-                aria-label="Sair"
-                className="rounded-xl border p-2.5 opacity-60 hover:opacity-100"
-                style={{ borderColor: "var(--border)" }}
-              >
-                <LockOpen size={16} />
-              </button>
-            </>
-          ) : (
-            <button
-              onClick={() => setLoginOpen(true)}
-              aria-label="Entrar"
-              className="flex items-center gap-1.5 rounded-xl border border-[var(--border)] px-3 py-2 text-sm text-[var(--muted)] transition hover:border-[var(--accent)] hover:text-[var(--accent)]"
-            >
-              <Lock size={14} />
-              Entrar
-            </button>
-          )}
-        </div>
+            )}
+          </div>
+        )}
       </header>
 
       {allTags.length > 0 && (
