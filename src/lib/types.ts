@@ -29,9 +29,13 @@ export type Collection = {
   id: string;
   name: string;
   created_at: string;
-  // só presente no GET /api/collections (ver route.ts) — embed do PostgREST,
-  // ausente na resposta do POST/PATCH de criar/renomear
+  // os 3 campos abaixo só vêm no GET /api/collections (ver route.ts) —
+  // ausentes na resposta do POST/PATCH de criar/renomear
   item_count?: number;
+  // até 4 image_path (não URL pública ainda) dos itens mais recentes da
+  // coleção, pro mosaico de preview do CollectionsPanel
+  thumbnails?: string[];
+  last_item_at?: string | null;
 };
 
 // colunas de items pra usar em todo select/update que devolve o item pro

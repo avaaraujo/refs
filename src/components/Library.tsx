@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { flushSync } from "react-dom";
-import Link from "next/link";
 import { toast } from "sonner";
 import {
   Plus,
@@ -21,6 +20,7 @@ import AddModal from "./AddModal";
 import DetailModal from "./DetailModal";
 import LoginModal from "./LoginModal";
 import ItemCard from "./ItemCard";
+import CollectionsPanel from "./CollectionsPanel";
 import type { Item, Collection } from "@/lib/types";
 import { createClient } from "@/lib/supabase/client";
 import { buildBoardBrief } from "@/lib/brief";
@@ -49,6 +49,7 @@ export default function Library() {
   const [collections, setCollections] = useState<Collection[]>([]);
   const [activeCollection, setActiveCollection] = useState<string | null>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [collectionsPanelOpen, setCollectionsPanelOpen] = useState(false);
 
   const [semanticMode, setSemanticMode] = useState(false);
   const [semanticIds, setSemanticIds] = useState<string[] | null>(null);
@@ -383,15 +384,15 @@ export default function Library() {
             </button>
 
             {(collections.length > 0 || authed) && (
-              <Link
-                href="/colecoes"
-                aria-label="Gerenciar coleções"
-                title="Gerenciar coleções"
+              <button
+                onClick={() => setCollectionsPanelOpen(true)}
+                aria-label="Coleções"
+                title="Coleções"
                 className="rounded-xl border p-2.5 transition hover:border-[var(--accent)] hover:text-[var(--accent)]"
                 style={{ borderColor: "var(--border)", color: "var(--muted)" }}
               >
                 <FolderSimple size={16} />
-              </Link>
+              </button>
             )}
 
             {!loading && filtered.length > 0 && (
@@ -633,6 +634,15 @@ export default function Library() {
           setItems((prev) => [item, ...prev]);
           setPendingUrl(null);
         }}
+      />
+
+      <CollectionsPanel
+        open={collectionsPanelOpen}
+        onClose={() => setCollectionsPanelOpen(false)}
+        collections={collections}
+        authed={authed}
+        onReload={loadCollections}
+        onSelectCollection={setActiveCollection}
       />
 
       <LoginModal
