@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
   X,
@@ -12,6 +12,7 @@ import {
   CaretLeft,
   CaretRight,
   CaretDown,
+  Plus,
 } from "@phosphor-icons/react/dist/ssr";
 import { publicImageUrl } from "@/lib/publicUrl";
 import { timeAgo } from "@/lib/timeAgo";
@@ -111,10 +112,20 @@ export default function DetailModal({
   const [recapturing, setRecapturing] = useState(false);
   const [delay, setDelay] = useState(3);
   const [openSection, setOpenSection] = useState<"info" | "taxonomy" | "recipe">("recipe");
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const imageInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setNotes(item?.notes ?? "");
   }, [item]);
+
+  // só rereseta a imagem ativa quando o item TROCA (navegação entre refs) —
+  // não a cada onUpdated do mesmo item (ex: salvar nota), senão perde a
+  // seleção de print toda vez que qualquer campo é editado
+  useEffect(() => {
+    setActiveImageIndex(0);
+  }, [item?.id]);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -240,6 +251,42 @@ export default function DetailModal({
     }
   }
 
+  async function uploadImage(file: File) {
+    setUploadingImage(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch(`/api/items/${item!.id}/images`, { method: "POST", body: fd });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error);
+      onUpdated({ ...item!, images: [...item!.images, json.image] });
+      setActiveImageIndex(item!.images.length + 1);
+      toast.success("Print adicionado.");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Erro ao adicionar print.");
+    } finally {
+      setUploadingImage(false);
+    }
+  }
+
+  async function deleteImage(imageId: string) {
+    if (!window.confirm("Apagar este print?")) return;
+    try {
+      const res = await fetch(`/api/items/${item!.id}/images/${imageId}`, { method: "DELETE" });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error);
+      onUpdated({ ...item!, images: item!.images.filter((i) => i.id !== imageId) });
+      setActiveImageIndex(0);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Erro ao apagar print.");
+    }
+  }
+
+  // capa (item.image_path) + prints adicionais (item_images), nessa ordem —
+  // ver lib/itemImages.ts / migration_008
+  const gallery = [{ id: null as string | null, image_path: item.image_path }, ...item.images];
+  const activeImage = gallery[activeImageIndex] ?? gallery[0];
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center gap-8 bg-black/60 p-4"
@@ -278,11 +325,53 @@ export default function DetailModal({
         <div className="relative shrink-0 aspect-[4/3] sm:h-full">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={publicImageUrl(item.image_path)}
+            src={publicImageUrl(activeImage.image_path)}
             alt={item.title ?? ""}
             className="h-full w-full object-cover"
-            style={{ viewTransitionName: "card-img" }}
+            style={{ viewTransitionName: activeImageIndex === 0 ? "card-img" : undefined }}
           />
+          {(gallery.length > 1 || authed) && (
+            <div className="absolute inset-x-0 top-0 flex flex-wrap gap-1.5 p-2">
+              {gallery.map((img, idx) => (
+                <button
+                  key={img.id ?? "cover"}
+                  onClick={() => setActiveImageIndex(idx)}
+                  aria-label={idx === 0 ? "Ver print de capa" : `Ver print adicional ${idx}`}
+                  aria-pressed={idx === activeImageIndex}
+                  className="h-8 w-8 shrink-0 overflow-hidden rounded-md border-2 transition"
+                  style={{ borderColor: idx === activeImageIndex ? "var(--accent)" : "rgba(255,255,255,0.4)" }}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={publicImageUrl(img.image_path)} alt="" className="h-full w-full object-cover" />
+                </button>
+              ))}
+              {authed && (
+                <>
+                  <button
+                    onClick={() => imageInputRef.current?.click()}
+                    disabled={uploadingImage}
+                    aria-label="Adicionar print"
+                    title="Adicionar print (hero, pricing, footer...)"
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border-2 border-dashed text-white/70 transition hover:text-white disabled:opacity-50"
+                    style={{ borderColor: "rgba(255,255,255,0.4)" }}
+                  >
+                    <Plus size={14} className={uploadingImage ? "animate-pulse" : undefined} />
+                  </button>
+                  <input
+                    ref={imageInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) uploadImage(file);
+                      e.target.value = "";
+                    }}
+                  />
+                </>
+              )}
+            </div>
+          )}
           {item.url && (
             <div
               className="absolute inset-x-0 bottom-0 flex justify-start p-3 pt-8"
@@ -565,17 +654,28 @@ export default function DetailModal({
                   </div>
                 )}
 
-                <button
-                  onClick={() => {
-                    if (!window.confirm("Apagar esta referência?")) return;
-                    onDelete(item.id);
-                    onClose();
-                  }}
-                  className="flex w-fit items-center gap-1.5 text-xs transition hover:opacity-80"
-                  style={{ color: "var(--danger)" }}
-                >
-                  <Trash size={14} /> Apagar referência
-                </button>
+                <div className="flex items-center gap-4">
+                  <button
+                    onClick={() => {
+                      if (!window.confirm("Apagar esta referência?")) return;
+                      onDelete(item.id);
+                      onClose();
+                    }}
+                    className="flex w-fit items-center gap-1.5 text-xs transition hover:opacity-80"
+                    style={{ color: "var(--danger)" }}
+                  >
+                    <Trash size={14} /> Apagar referência
+                  </button>
+                  {activeImageIndex > 0 && (
+                    <button
+                      onClick={() => deleteImage(gallery[activeImageIndex].id!)}
+                      className="flex w-fit items-center gap-1.5 text-xs opacity-70 transition hover:opacity-100"
+                      style={{ color: "var(--danger)" }}
+                    >
+                      <Trash size={14} /> Apagar este print
+                    </button>
+                  )}
+                </div>
               </div>
             )}
           </div>

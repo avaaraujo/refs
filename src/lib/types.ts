@@ -15,7 +15,14 @@ export type Item = {
   site_recipe: string | null;
   notes: string | null;
   collection_ids: string[];
+  images: ItemImage[];
   created_at: string;
+};
+
+export type ItemImage = {
+  id: string;
+  image_path: string;
+  position: number;
 };
 
 export type Collection = {

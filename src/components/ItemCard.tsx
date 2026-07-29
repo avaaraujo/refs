@@ -75,6 +75,11 @@ export default function ItemCard({
           className="w-full object-cover"
           loading="lazy"
         />
+        {item.images.length > 0 && (
+          <span className="absolute top-2 left-2 rounded-full bg-black/60 px-1.5 py-0.5 text-[10px] text-white backdrop-blur">
+            +{item.images.length}
+          </span>
+        )}
         {/* sempre no DOM (não só em hover) pra ficar alcançável via Tab;
             visibilidade é só CSS, revelada por mouse OU foco de teclado */}
         <div className="absolute inset-x-0 top-0 flex justify-end gap-1 p-2 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">

@@ -9,6 +9,7 @@ import { getAuthedUser } from "@/lib/supabase/server";
 import { embedItem, isEmbeddingConfigured } from "@/lib/embeddings";
 import { ITEM_COLUMNS } from "@/lib/types";
 import { attachCollectionIds, attachCollectionIdsToOne, itemIdsInCollection } from "@/lib/collections";
+import { attachImages, attachImagesToOne } from "@/lib/itemImages";
 import { extractPalette } from "@/lib/palette";
 
 export async function GET(req: NextRequest) {
@@ -39,7 +40,8 @@ export async function GET(req: NextRequest) {
 
   const { data, error } = await query;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ items: await attachCollectionIds(supabase, data ?? []) });
+  const withCollections = await attachCollectionIds(supabase, data ?? []);
+  return NextResponse.json({ items: await attachImages(supabase, withCollections) });
 }
 
 export async function POST(req: NextRequest) {
@@ -161,5 +163,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: insertError.message }, { status: 500 });
   }
 
-  return NextResponse.json({ item: await attachCollectionIdsToOne(supabase, data) }, { status: 201 });
+  return NextResponse.json(
+    { item: await attachImagesToOne(supabase, await attachCollectionIdsToOne(supabase, data)) },
+    { status: 201 },
+  );
 }

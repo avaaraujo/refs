@@ -7,6 +7,7 @@ import { getAuthedUser } from "@/lib/supabase/server";
 import { embedItem, isEmbeddingConfigured } from "@/lib/embeddings";
 import { ITEM_COLUMNS } from "@/lib/types";
 import { attachCollectionIdsToOne } from "@/lib/collections";
+import { attachImagesToOne } from "@/lib/itemImages";
 import { extractPalette } from "@/lib/palette";
 
 // captura (com delay) + tagging por IA passam bem dos 10s padrão
@@ -126,5 +127,5 @@ export async function POST(
   // só agora o print antigo é descartável; falhar aqui não invalida a recaptura
   await supabase.storage.from("refs").remove([item.image_path]);
 
-  return NextResponse.json({ item: await attachCollectionIdsToOne(supabase, data) });
+  return NextResponse.json({ item: await attachImagesToOne(supabase, await attachCollectionIdsToOne(supabase, data)) });
 }

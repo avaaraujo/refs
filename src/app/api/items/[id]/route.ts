@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getAuthedUser } from "@/lib/supabase/server";
 import { ITEM_COLUMNS } from "@/lib/types";
 import { attachCollectionIdsToOne, setItemCollections } from "@/lib/collections";
+import { attachImagesToOne } from "@/lib/itemImages";
 
 export async function DELETE(
   _req: NextRequest,
@@ -25,7 +26,9 @@ export async function DELETE(
     return NextResponse.json({ error: fetchError.message }, { status: 404 });
   }
 
-  await supabase.storage.from("refs").remove([item.image_path]);
+  const { data: extraImages } = await supabase.from("item_images").select("image_path").eq("item_id", id);
+  const paths = [item.image_path, ...(extraImages ?? []).map((i) => i.image_path)];
+  await supabase.storage.from("refs").remove(paths);
 
   const { error: deleteError } = await supabase.from("items").delete().eq("id", id);
   if (deleteError) {
@@ -59,7 +62,7 @@ export async function PATCH(
   if (Object.keys(update).length === 0) {
     const { data, error } = await supabase.from("items").select(ITEM_COLUMNS).eq("id", id).single();
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-    return NextResponse.json({ item: await attachCollectionIdsToOne(supabase, data) });
+    return NextResponse.json({ item: await attachImagesToOne(supabase, await attachCollectionIdsToOne(supabase, data)) });
   }
 
   const { data, error } = await supabase
@@ -70,5 +73,5 @@ export async function PATCH(
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ item: await attachCollectionIdsToOne(supabase, data) });
+  return NextResponse.json({ item: await attachImagesToOne(supabase, await attachCollectionIdsToOne(supabase, data)) });
 }
