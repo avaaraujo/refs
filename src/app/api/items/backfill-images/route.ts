@@ -48,6 +48,20 @@ export async function POST(req: NextRequest) {
   for (const item of missing) {
     try {
       const shots = await captureSpreadScreenshots(item.url!);
+
+      // recheca agora (não só no snapshot do início, feito antes da captura
+      // full-page — lenta o bastante pra uma recaptura manual do mesmo item
+      // ter rodado nesse meio-tempo e já ter adicionado prints) pra não
+      // duplicar prints de um item que deixou de estar "faltando"
+      const { count } = await supabase
+        .from("item_images")
+        .select("id", { count: "exact", head: true })
+        .eq("item_id", item.id);
+      if (count && count > 0) {
+        processed++;
+        continue;
+      }
+
       // página curta: captureSpreadScreenshots já devolveu só 1 recorte, nada
       // pra adicionar além da capa que a ref já tem
       for (const shot of shots.slice(1)) {

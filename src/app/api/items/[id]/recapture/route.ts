@@ -43,11 +43,6 @@ export async function POST(
     );
   }
 
-  const { data: oldExtraImages } = await supabase
-    .from("item_images")
-    .select("id, image_path")
-    .eq("item_id", id);
-
   let bytes: Buffer;
   let mediaType: "image/jpeg" | "image/png" | "image/webp";
   let extraShots: { bytes: Buffer; mediaType: "image/jpeg" | "image/png" | "image/webp" }[] = [];
@@ -136,7 +131,11 @@ export async function POST(
 
   // troca os prints adicionais pelos novos recortes espalhados — os antigos
   // vieram da página como ela estava antes, não fazem mais sentido junto de
-  // uma capa recapturada. Falhar aqui também não invalida a recaptura da capa.
+  // uma capa recapturada. Busca de novo (em vez de reusar uma leitura feita
+  // antes da captura, que pode levar dezenas de segundos) pra evitar duplicar
+  // prints se um backfill em lote tiver adicionado algo nesse meio-tempo.
+  // Falhar aqui também não invalida a recaptura da capa.
+  const { data: oldExtraImages } = await supabase.from("item_images").select("id, image_path").eq("item_id", id);
   if (oldExtraImages && oldExtraImages.length > 0) {
     await supabase.from("item_images").delete().eq("item_id", id);
     await supabase.storage.from("refs").remove(oldExtraImages.map((img) => img.image_path));

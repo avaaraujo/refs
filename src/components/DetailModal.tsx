@@ -323,19 +323,20 @@ export default function DetailModal({
         style={{ background: "var(--card)", borderColor: "var(--border)" }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* recorte 4:3 do print (mesma proporção da captura): a altura é
-            fixa (a do modal) e a largura é derivada dela via aspect-ratio —
-            nunca o inverso, senão o painel ao lado (mais alto com Recipe
-            aberto) estica a imagem e distorce o recorte. A tira de
-            miniaturas abaixo do print grande divide essa altura fixa com
-            ele (flex column), não flutua por cima. */}
-        <div className="flex shrink-0 aspect-[4/3] flex-col sm:h-full">
+        {/* proporção próxima da captura (1400x900, ~3:2): a altura é fixa (a
+            do modal) e a largura é derivada dela via aspect-ratio — nunca o
+            inverso, senão o painel ao lado (mais alto com Recipe aberto)
+            estica a imagem. object-contain (não cover) pra nunca cropar o
+            print — sobra é letterbox, não corte. A tira de miniaturas
+            abaixo do print grande divide essa altura fixa com ele (flex
+            column), não flutua por cima. */}
+        <div className="flex shrink-0 aspect-[3/2] flex-col sm:h-full">
           <div className="relative min-h-0 flex-1">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={publicImageUrl(activeImage.image_path)}
               alt={item.title ?? ""}
-              className="h-full w-full object-cover"
+              className="h-full w-full object-contain"
               style={{ viewTransitionName: activeImageIndex === 0 ? "card-img" : undefined }}
             />
             {item.url && (
@@ -373,7 +374,7 @@ export default function DetailModal({
                   key={img.id ?? "cover"}
                   onClick={() => setActiveImageIndex(idx)}
                   aria-label={idx === 0 ? "Ver print de capa" : `Ver print adicional ${idx}`}
-                  className="h-12 w-12 shrink-0 overflow-hidden rounded-md border-2 transition hover:border-[var(--accent)]"
+                  className="h-16 w-16 shrink-0 overflow-hidden rounded-md border-2 transition hover:border-[var(--accent)]"
                   style={{ borderColor: "var(--border)" }}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -387,10 +388,10 @@ export default function DetailModal({
                     disabled={uploadingImage}
                     aria-label="Adicionar print"
                     title="Adicionar print (hero, pricing, footer...)"
-                    className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md border-2 border-dashed transition hover:border-[var(--accent)] hover:text-[var(--accent)] disabled:opacity-50"
+                    className="flex h-16 w-16 shrink-0 items-center justify-center rounded-md border-2 border-dashed transition hover:border-[var(--accent)] hover:text-[var(--accent)] disabled:opacity-50"
                     style={{ borderColor: "var(--border)", color: "var(--muted)" }}
                   >
-                    <Plus size={14} className={uploadingImage ? "animate-pulse" : undefined} />
+                    <Plus size={18} className={uploadingImage ? "animate-pulse" : undefined} />
                   </button>
                   <input
                     ref={imageInputRef}
