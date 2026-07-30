@@ -323,14 +323,17 @@ export default function DetailModal({
         style={{ background: "var(--card)", borderColor: "var(--border)" }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* proporção próxima da captura (1400x900, ~3:2): a altura é fixa (a
-            do modal) e a largura é derivada dela via aspect-ratio — nunca o
-            inverso, senão o painel ao lado (mais alto com Recipe aberto)
-            estica a imagem. object-contain (não cover) pra nunca cropar o
-            print — sobra é letterbox, não corte. A tira de miniaturas
-            abaixo do print grande divide essa altura fixa com ele (flex
-            column), não flutua por cima. */}
-        <div className="flex shrink-0 aspect-[3/2] flex-col sm:h-full">
+        {/* a altura é fixa (a do modal) e a largura é derivada dela via
+            aspect-ratio — nunca o inverso, senão o painel ao lado (mais alto
+            com Recipe aberto) estica a imagem. object-contain (não cover)
+            pra nunca cropar o print — sobra vira letterbox, não corte. A
+            tira de miniaturas abaixo do print grande consome parte dessa
+            altura fixa (flex column, não flutua por cima), então o aspect
+            do CONTAINER precisa ser mais estreito que o da captura
+            (1400x900, ~1.56) pra sobrar isso pro print de fato preencher a
+            largura toda sem barras laterais — 7:5 (1.4) é o ajuste que
+            compensa a tira sem medir pixel a pixel por breakpoint. */}
+        <div className="flex shrink-0 aspect-[7/5] flex-col sm:h-full">
           <div className="relative min-h-0 flex-1">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
