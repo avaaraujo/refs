@@ -2,15 +2,18 @@ import { NextRequest, NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { tagImage } from "@/lib/tagging";
-import { captureScreenshot, extractDomain } from "@/lib/screenshot";
+import { captureSpreadScreenshots, extractDomain } from "@/lib/screenshot";
 import { detectTech } from "@/lib/techDetect";
 import { normalizeUrl } from "@/lib/normalizeUrl";
 import { getAuthedUser } from "@/lib/supabase/server";
 import { embedItem, isEmbeddingConfigured } from "@/lib/embeddings";
 import { ITEM_COLUMNS } from "@/lib/types";
 import { attachCollectionIds, attachCollectionIdsToOne, itemIdsInCollection } from "@/lib/collections";
-import { attachImages, attachImagesToOne } from "@/lib/itemImages";
+import { attachImages, attachImagesToOne, addItemImage } from "@/lib/itemImages";
 import { extractPalette } from "@/lib/palette";
+
+// captura full-page + tagging por IA passam bem dos 10s padrão da Vercel
+export const maxDuration = 60;
 
 export async function GET(req: NextRequest) {
   const tag = req.nextUrl.searchParams.get("tag");
@@ -61,6 +64,9 @@ export async function POST(req: NextRequest) {
 
   let bytes: Buffer;
   let mediaType: "image/jpeg" | "image/png" | "image/webp" = "image/jpeg";
+  // prints extras (posições 1-3 do recorte espalhado) só existem quando o
+  // item veio de URL — print enviado à mão não tem página pra espalhar
+  let extraShots: { bytes: Buffer; mediaType: "image/jpeg" | "image/png" | "image/webp" }[] = [];
 
   try {
     if (file) {
@@ -68,9 +74,10 @@ export async function POST(req: NextRequest) {
       if (file.type === "image/png") mediaType = "image/png";
       else if (file.type === "image/webp") mediaType = "image/webp";
     } else {
-      const shot = await captureScreenshot(url!);
-      bytes = shot.bytes;
-      mediaType = shot.mediaType;
+      const [hero, ...rest] = await captureSpreadScreenshots(url!);
+      bytes = hero.bytes;
+      mediaType = hero.mediaType;
+      extraShots = rest;
     }
   } catch (e) {
     return NextResponse.json(
@@ -161,6 +168,23 @@ export async function POST(req: NextRequest) {
 
   if (insertError) {
     return NextResponse.json({ error: insertError.message }, { status: 500 });
+  }
+
+  // sobe os prints extras (espalhados pela página) e anexa em item_images,
+  // na ordem em que foram recortados — falha aqui não invalida o item, que
+  // já existe com a capa; só fica sem os prints adicionais
+  for (const shot of extraShots) {
+    try {
+      const extraExt = shot.mediaType === "image/png" ? "png" : shot.mediaType === "image/webp" ? "webp" : "jpg";
+      const extraPath = `${randomUUID()}.${extraExt}`;
+      const { error: extraUploadError } = await supabase.storage
+        .from("refs")
+        .upload(extraPath, shot.bytes, { contentType: shot.mediaType, upsert: false });
+      if (extraUploadError) throw new Error(extraUploadError.message);
+      await addItemImage(supabase, data.id, extraPath);
+    } catch (e) {
+      console.error("extra screenshot upload failed", e);
+    }
   }
 
   return NextResponse.json(

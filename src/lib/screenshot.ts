@@ -1,3 +1,5 @@
+import sharp from "sharp";
+
 export type ScreenshotResult = {
   bytes: Buffer;
   mediaType: "image/jpeg" | "image/png" | "image/webp";
@@ -7,9 +9,16 @@ export type ScreenshotResult = {
 export const DEFAULT_CAPTURE_DELAY = 3;
 export const MAX_CAPTURE_DELAY = 15;
 
+const SPREAD_WIDTH = 1400;
+const SPREAD_HEIGHT = 900;
+// frações da altura total (já descontada a altura do próprio recorte) onde
+// cada um dos 4 prints começa: hero, ~1/3, ~2/3, e o mais perto possível do
+// rodapé — sempre cobre a página inteira disponível, não importa a altura
+const SPREAD_FRACTIONS = [0, 1 / 3, 2 / 3, 1];
+
 export async function captureScreenshot(
   url: string,
-  opts: { delay?: number } = {},
+  opts: { delay?: number; fullPage?: boolean } = {},
 ): Promise<ScreenshotResult> {
   const accessKey = process.env.SCREENSHOTONE_ACCESS_KEY;
   if (!accessKey) {
@@ -24,8 +33,8 @@ export async function captureScreenshot(
   const params = new URLSearchParams({
     access_key: accessKey,
     url,
-    viewport_width: "1400",
-    viewport_height: "900",
+    viewport_width: String(SPREAD_WIDTH),
+    viewport_height: String(SPREAD_HEIGHT),
     format: "jpg",
     image_quality: "85",
     // espera a rede sossegar e ainda dá um tempo pra animação de entrada terminar
@@ -38,6 +47,7 @@ export async function captureScreenshot(
     // a imagem é guardada no nosso storage; cache do provedor só atrapalha recaptura
     cache: "false",
   });
+  if (opts.fullPage) params.set("full_page", "true");
 
   const res = await fetch(`https://api.screenshotone.com/take?${params}`);
   if (!res.ok) {
@@ -55,6 +65,38 @@ export async function captureScreenshot(
       : "image/jpeg";
   const arrayBuffer = await res.arrayBuffer();
   return { bytes: Buffer.from(arrayBuffer), mediaType };
+}
+
+// 4 prints espalhados pela página (hero, ~1/3, ~2/3, perto do rodapé) em vez
+// de só o hero — uma única captura full-page + recorte local com sharp, pra
+// não gastar 4 chamadas de API nem 4 cargas de página (mais rápido e mais
+// barato). O primeiro recorte (índice 0, sempre o hero) é quem vira a capa
+// do item; os outros 3 viram prints adicionais (ver lib/itemImages.ts).
+export async function captureSpreadScreenshots(
+  url: string,
+  opts: { delay?: number } = {},
+): Promise<ScreenshotResult[]> {
+  const full = await captureScreenshot(url, { ...opts, fullPage: true });
+  const meta = await sharp(full.bytes).metadata();
+  const width = meta.width ?? SPREAD_WIDTH;
+  const height = meta.height ?? SPREAD_HEIGHT;
+  const cropHeight = Math.min(SPREAD_HEIGHT, height);
+  const scrollRange = height - cropHeight;
+
+  // página curta (sem altura real pra espalhar os recortes): os 4 sairiam
+  // quase idênticos, então devolve só o hero
+  if (scrollRange < cropHeight * 0.15) {
+    const bytes = await sharp(full.bytes).extract({ left: 0, top: 0, width, height: cropHeight }).toBuffer();
+    return [{ bytes, mediaType: full.mediaType }];
+  }
+
+  const shots: ScreenshotResult[] = [];
+  for (const fraction of SPREAD_FRACTIONS) {
+    const top = Math.round(fraction * scrollRange);
+    const bytes = await sharp(full.bytes).extract({ left: 0, top, width, height: cropHeight }).toBuffer();
+    shots.push({ bytes, mediaType: full.mediaType });
+  }
+  return shots;
 }
 
 /** ScreenshotOne devolve o motivo real do erro em JSON; cai pro status se não vier. */

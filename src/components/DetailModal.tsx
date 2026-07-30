@@ -286,6 +286,11 @@ export default function DetailModal({
   // ver lib/itemImages.ts / migration_008
   const gallery = [{ id: null as string | null, image_path: item.image_path }, ...item.images];
   const activeImage = gallery[activeImageIndex] ?? gallery[0];
+  // miniaturas mostram só os OUTROS prints (o ativo já está grande) — clicar
+  // numa miniatura troca qual entra na posição grande
+  const otherImages = gallery
+    .map((img, idx) => ({ img, idx }))
+    .filter(({ idx }) => idx !== activeImageIndex);
 
   return (
     <div
@@ -321,25 +326,55 @@ export default function DetailModal({
         {/* recorte 4:3 do print (mesma proporção da captura): a altura é
             fixa (a do modal) e a largura é derivada dela via aspect-ratio —
             nunca o inverso, senão o painel ao lado (mais alto com Recipe
-            aberto) estica a imagem e distorce o recorte */}
-        <div className="relative shrink-0 aspect-[4/3] sm:h-full">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={publicImageUrl(activeImage.image_path)}
-            alt={item.title ?? ""}
-            className="h-full w-full object-cover"
-            style={{ viewTransitionName: activeImageIndex === 0 ? "card-img" : undefined }}
-          />
-          {(gallery.length > 1 || authed) && (
-            <div className="absolute inset-x-0 top-0 flex flex-wrap gap-1.5 p-2">
-              {gallery.map((img, idx) => (
+            aberto) estica a imagem e distorce o recorte. A tira de
+            miniaturas abaixo do print grande divide essa altura fixa com
+            ele (flex column), não flutua por cima. */}
+        <div className="flex shrink-0 aspect-[4/3] flex-col sm:h-full">
+          <div className="relative min-h-0 flex-1">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={publicImageUrl(activeImage.image_path)}
+              alt={item.title ?? ""}
+              className="h-full w-full object-cover"
+              style={{ viewTransitionName: activeImageIndex === 0 ? "card-img" : undefined }}
+            />
+            {item.url && (
+              <div
+                className="absolute inset-x-0 bottom-0 flex justify-start p-3 pt-8"
+                style={{ background: "linear-gradient(transparent, rgba(0,0,0,0.55))" }}
+              >
+                <a
+                  href={item.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex max-w-full items-center gap-2 rounded-xl border px-3 py-2.5 text-sm text-white backdrop-blur-md transition hover:border-[var(--accent)]"
+                  style={{ background: "rgba(20,20,20,0.75)", borderColor: "rgba(255,255,255,0.15)" }}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={`https://www.google.com/s2/favicons?domain=${item.source_domain}&sz=32`}
+                    alt=""
+                    className="h-4 w-4 shrink-0 rounded-sm"
+                  />
+                  <span className="truncate">Ver {item.source_domain}</span>
+                  <ArrowSquareOut size={14} />
+                </a>
+              </div>
+            )}
+          </div>
+
+          {(otherImages.length > 0 || authed) && (
+            <div
+              className="scroll-thin flex shrink-0 gap-1.5 overflow-x-auto border-t p-2"
+              style={{ borderColor: "var(--border)" }}
+            >
+              {otherImages.map(({ img, idx }) => (
                 <button
                   key={img.id ?? "cover"}
                   onClick={() => setActiveImageIndex(idx)}
                   aria-label={idx === 0 ? "Ver print de capa" : `Ver print adicional ${idx}`}
-                  aria-pressed={idx === activeImageIndex}
-                  className="h-8 w-8 shrink-0 overflow-hidden rounded-md border-2 transition"
-                  style={{ borderColor: idx === activeImageIndex ? "var(--accent)" : "rgba(255,255,255,0.4)" }}
+                  className="h-12 w-12 shrink-0 overflow-hidden rounded-md border-2 transition hover:border-[var(--accent)]"
+                  style={{ borderColor: "var(--border)" }}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={publicImageUrl(img.image_path)} alt="" className="h-full w-full object-cover" />
@@ -352,8 +387,8 @@ export default function DetailModal({
                     disabled={uploadingImage}
                     aria-label="Adicionar print"
                     title="Adicionar print (hero, pricing, footer...)"
-                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border-2 border-dashed text-white/70 transition hover:text-white disabled:opacity-50"
-                    style={{ borderColor: "rgba(255,255,255,0.4)" }}
+                    className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md border-2 border-dashed transition hover:border-[var(--accent)] hover:text-[var(--accent)] disabled:opacity-50"
+                    style={{ borderColor: "var(--border)", color: "var(--muted)" }}
                   >
                     <Plus size={14} className={uploadingImage ? "animate-pulse" : undefined} />
                   </button>
@@ -370,29 +405,6 @@ export default function DetailModal({
                   />
                 </>
               )}
-            </div>
-          )}
-          {item.url && (
-            <div
-              className="absolute inset-x-0 bottom-0 flex justify-start p-3 pt-8"
-              style={{ background: "linear-gradient(transparent, rgba(0,0,0,0.55))" }}
-            >
-              <a
-                href={item.url}
-                target="_blank"
-                rel="noreferrer"
-                className="flex max-w-full items-center gap-2 rounded-xl border px-3 py-2.5 text-sm text-white backdrop-blur-md transition hover:border-[var(--accent)]"
-                style={{ background: "rgba(20,20,20,0.75)", borderColor: "rgba(255,255,255,0.15)" }}
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={`https://www.google.com/s2/favicons?domain=${item.source_domain}&sz=32`}
-                  alt=""
-                  className="h-4 w-4 shrink-0 rounded-sm"
-                />
-                <span className="truncate">Ver {item.source_domain}</span>
-                <ArrowSquareOut size={14} />
-              </a>
             </div>
           )}
         </div>
