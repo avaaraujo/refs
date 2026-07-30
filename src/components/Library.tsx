@@ -340,7 +340,8 @@ export default function Library() {
   }
 
   return (
-    <div className="px-4 py-8 sm:px-6 lg:px-8">
+    <div className="px-4 pb-8 sm:px-6 lg:px-8">
+      <div className="sticky top-0 z-30 pt-8 pb-2" style={{ background: "var(--bg)" }}>
       <header className="mb-6">
         <div className="flex flex-wrap items-center gap-4">
           <div className="mr-auto">
@@ -629,6 +630,7 @@ export default function Library() {
             ))}
         </div>
       )}
+      </div>
 
       {loading ? (
         <p className="py-20 text-center text-sm" style={{ color: "var(--muted)" }}>
