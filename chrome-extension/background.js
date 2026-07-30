@@ -5,7 +5,13 @@
 const BASE_URL = "https://refs.avaaraujo.com";
 
 function openAddTab(url) {
-  if (!url) return;
+  // sem "activeTab" no manifest, tab.url/info.pageUrl vêm undefined e isso
+  // falha em silêncio (o ícone "não faz nada") — o log ajuda a diagnosticar
+  // se isso voltar a acontecer
+  if (!url) {
+    console.error("Refs do Avá: sem URL da aba pra abrir.");
+    return;
+  }
   chrome.tabs.create({ url: `${BASE_URL}/?add=${encodeURIComponent(url)}` });
 }
 
