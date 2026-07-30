@@ -15,6 +15,7 @@ import {
   ArrowsClockwise,
   Funnel,
   FunnelX,
+  ImagesSquare,
 } from "@phosphor-icons/react/dist/ssr";
 import AddModal from "./AddModal";
 import DetailModal from "./DetailModal";
@@ -56,6 +57,7 @@ export default function Library() {
   const [semanticLoading, setSemanticLoading] = useState(false);
 
   const [retagging, setRetagging] = useState(false);
+  const [backfillingImages, setBackfillingImages] = useState(false);
 
   // fluxo do bookmarklet: abre a Library com ?add=<url-da-aba-de-origem>;
   // aqui só espera o check de auth terminar pra decidir se abre direto o
@@ -240,6 +242,28 @@ export default function Library() {
     }
   }
 
+  // backfill dos prints espalhados pras refs de antes dessa feature (só têm
+  // a capa) — não mexe na capa, só adiciona os outros 3 prints. Clicar de
+  // novo continua de onde parou (ver api/items/backfill-images/route.ts)
+  async function backfillImages() {
+    setBackfillingImages(true);
+    try {
+      const res = await fetch("/api/items/backfill-images", { method: "POST" });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error);
+      toast.success(
+        json.processed === 0
+          ? "Todas as refs já têm os prints espalhados."
+          : `${json.processed} referência${json.processed === 1 ? "" : "s"} com prints novos${json.failed ? ` (${json.failed} falhas)` : ""}.`,
+      );
+      await load();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Erro ao buscar prints.");
+    } finally {
+      setBackfillingImages(false);
+    }
+  }
+
   async function handleLogout() {
     const supabase = createClient();
     await supabase.auth.signOut();
@@ -418,6 +442,16 @@ export default function Library() {
                   style={{ borderColor: "var(--border)" }}
                 >
                   <ArrowsClockwise size={16} className={retagging ? "animate-spin" : undefined} />
+                </button>
+                <button
+                  onClick={backfillImages}
+                  disabled={backfillingImages}
+                  aria-label="Buscar prints espalhados nas refs antigas"
+                  title="Buscar os prints espalhados (hero + 3) nas refs que só têm a capa"
+                  className="rounded-xl border p-2.5 opacity-60 hover:opacity-100 disabled:opacity-30"
+                  style={{ borderColor: "var(--border)" }}
+                >
+                  <ImagesSquare size={16} className={backfillingImages ? "animate-pulse" : undefined} />
                 </button>
                 <button
                   onClick={() => setModalOpen(true)}
