@@ -2,16 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { tagImage } from "@/lib/tagging";
-import { captureScreenshot, DEFAULT_CAPTURE_DELAY } from "@/lib/screenshot";
+import { captureSpreadScreenshots, DEFAULT_CAPTURE_DELAY } from "@/lib/screenshot";
 import { getAuthedUser } from "@/lib/supabase/server";
 import { embedItem, isEmbeddingConfigured } from "@/lib/embeddings";
 import { ITEM_COLUMNS } from "@/lib/types";
 import { attachCollectionIdsToOne } from "@/lib/collections";
-import { attachImagesToOne } from "@/lib/itemImages";
+import { attachImagesToOne, addItemImage } from "@/lib/itemImages";
 import { extractPalette } from "@/lib/palette";
 
-// captura (com delay) + tagging por IA passam bem dos 10s padrão
-export const maxDuration = 60;
+// captura full-page (com delay) + tagging por IA passam bem dos 10s padrão
+export const maxDuration = 120;
 
 export async function POST(
   req: NextRequest,
@@ -43,12 +43,19 @@ export async function POST(
     );
   }
 
+  const { data: oldExtraImages } = await supabase
+    .from("item_images")
+    .select("id, image_path")
+    .eq("item_id", id);
+
   let bytes: Buffer;
   let mediaType: "image/jpeg" | "image/png" | "image/webp";
+  let extraShots: { bytes: Buffer; mediaType: "image/jpeg" | "image/png" | "image/webp" }[] = [];
   try {
-    const shot = await captureScreenshot(item.url, { delay });
-    bytes = shot.bytes;
-    mediaType = shot.mediaType;
+    const [hero, ...rest] = await captureSpreadScreenshots(item.url, { delay });
+    bytes = hero.bytes;
+    mediaType = hero.mediaType;
+    extraShots = rest;
   } catch (e) {
     return NextResponse.json(
       { error: e instanceof Error ? e.message : "Falha ao capturar screenshot." },
@@ -126,6 +133,27 @@ export async function POST(
 
   // só agora o print antigo é descartável; falhar aqui não invalida a recaptura
   await supabase.storage.from("refs").remove([item.image_path]);
+
+  // troca os prints adicionais pelos novos recortes espalhados — os antigos
+  // vieram da página como ela estava antes, não fazem mais sentido junto de
+  // uma capa recapturada. Falhar aqui também não invalida a recaptura da capa.
+  if (oldExtraImages && oldExtraImages.length > 0) {
+    await supabase.from("item_images").delete().eq("item_id", id);
+    await supabase.storage.from("refs").remove(oldExtraImages.map((img) => img.image_path));
+  }
+  for (const shot of extraShots) {
+    try {
+      const extraExt = shot.mediaType === "image/png" ? "png" : shot.mediaType === "image/webp" ? "webp" : "jpg";
+      const extraPath = `${randomUUID()}.${extraExt}`;
+      const { error: extraUploadError } = await supabase.storage
+        .from("refs")
+        .upload(extraPath, shot.bytes, { contentType: shot.mediaType, upsert: false });
+      if (extraUploadError) throw new Error(extraUploadError.message);
+      await addItemImage(supabase, id, extraPath);
+    } catch (e) {
+      console.error("extra screenshot upload failed", e);
+    }
+  }
 
   return NextResponse.json({ item: await attachImagesToOne(supabase, await attachCollectionIdsToOne(supabase, data)) });
 }

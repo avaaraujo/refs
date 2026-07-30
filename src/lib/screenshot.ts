@@ -47,7 +47,13 @@ export async function captureScreenshot(
     // a imagem é guardada no nosso storage; cache do provedor só atrapalha recaptura
     cache: "false",
   });
-  if (opts.fullPage) params.set("full_page", "true");
+  if (opts.fullPage) {
+    params.set("full_page", "true");
+    // full-page (scroll + stitch) demora bem mais que um viewport só —
+    // sites com animação/lazy-load pesados batem no timeout padrão
+    params.set("timeout", "60");
+    params.set("full_page_scroll_delay", "300");
+  }
 
   const res = await fetch(`https://api.screenshotone.com/take?${params}`);
   if (!res.ok) {
@@ -76,7 +82,18 @@ export async function captureSpreadScreenshots(
   url: string,
   opts: { delay?: number } = {},
 ): Promise<ScreenshotResult[]> {
-  const full = await captureScreenshot(url, { ...opts, fullPage: true });
+  let full: ScreenshotResult;
+  try {
+    full = await captureScreenshot(url, { ...opts, fullPage: true });
+  } catch (e) {
+    // sites com animação/scroll pesado às vezes nunca "sossegam" o
+    // suficiente pro full-page terminar dentro do timeout — cai pro print
+    // de viewport só (comportamento de antes dessa feature) em vez de falhar
+    // a recaptura inteira por causa dos prints extras
+    console.error("full-page capture failed, falling back to single shot", e);
+    const single = await captureScreenshot(url, opts);
+    return [single];
+  }
   const meta = await sharp(full.bytes).metadata();
   const width = meta.width ?? SPREAD_WIDTH;
   const height = meta.height ?? SPREAD_HEIGHT;

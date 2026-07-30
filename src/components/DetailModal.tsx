@@ -636,7 +636,7 @@ export default function DetailModal({
                 {item.url && (
                   <div>
                     <p className="mb-2 text-xs" style={{ color: "var(--muted)" }}>
-                      Print saiu errado (ex: animação de entrada não terminou)? Recapture.
+                      Print saiu errado (ex: animação de entrada não terminou)? Recapture — refaz a capa e os outros 3 prints espalhados.
                     </p>
                     <div className="flex items-center gap-2">
                       <button

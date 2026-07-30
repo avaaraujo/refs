@@ -12,8 +12,9 @@ import { attachCollectionIds, attachCollectionIdsToOne, itemIdsInCollection } fr
 import { attachImages, attachImagesToOne, addItemImage } from "@/lib/itemImages";
 import { extractPalette } from "@/lib/palette";
 
-// captura full-page + tagging por IA passam bem dos 10s padrão da Vercel
-export const maxDuration = 60;
+// captura full-page (até 60s de timeout próprio, ver lib/screenshot.ts) +
+// tagging por IA passam bem dos 10s padrão da Vercel
+export const maxDuration = 120;
 
 export async function GET(req: NextRequest) {
   const tag = req.nextUrl.searchParams.get("tag");

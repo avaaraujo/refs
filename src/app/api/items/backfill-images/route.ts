@@ -19,7 +19,10 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json().catch(() => ({}));
-  const limit = Number.isFinite(body.limit) ? Math.min(Math.max(Number(body.limit), 1), 15) : 8;
+  // cada item pode levar até 60s (timeout da captura full-page, ver
+  // lib/screenshot.ts) — lote menor que o do retag-all pra não estourar o
+  // maxDuration da function em dias ruins de rede
+  const limit = Number.isFinite(body.limit) ? Math.min(Math.max(Number(body.limit), 1), 10) : 5;
 
   const supabase = createAdminClient();
 
