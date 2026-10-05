@@ -1,11 +1,11 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { RefsClient } from "@/lib/supabase/admin";
 
 // item_collections é a tabela de junção (many-to-many, ver
 // supabase/migration_006_collections_many_to_many.sql) — não existe coluna
 // collection_id em items, então todo select de item precisa desse merge à
 // parte antes de devolver pro client.
 export async function attachCollectionIds<T extends { id: string }>(
-  supabase: SupabaseClient,
+  supabase: RefsClient,
   items: T[],
 ): Promise<(T & { collection_ids: string[] })[]> {
   if (items.length === 0) return [];
@@ -28,7 +28,7 @@ export async function attachCollectionIds<T extends { id: string }>(
 }
 
 export async function attachCollectionIdsToOne<T extends { id: string }>(
-  supabase: SupabaseClient,
+  supabase: RefsClient,
   item: T,
 ): Promise<T & { collection_ids: string[] }> {
   const [withCollections] = await attachCollectionIds(supabase, [item]);
@@ -38,7 +38,7 @@ export async function attachCollectionIdsToOne<T extends { id: string }>(
 // substitui por completo as coleções de um item (delete + insert) — mais
 // simples que calcular diff quando o volume é de uma biblioteca pessoal
 export async function setItemCollections(
-  supabase: SupabaseClient,
+  supabase: RefsClient,
   itemId: string,
   collectionIds: string[],
 ): Promise<void> {
@@ -50,7 +50,7 @@ export async function setItemCollections(
 }
 
 export async function resolveCollectionIds(
-  supabase: SupabaseClient,
+  supabase: RefsClient,
   names: string[],
 ): Promise<string[]> {
   if (names.length === 0) return [];
@@ -58,7 +58,7 @@ export async function resolveCollectionIds(
   return (data ?? []).map((c) => c.id);
 }
 
-export async function itemIdsInCollection(supabase: SupabaseClient, collectionId: string): Promise<string[]> {
+export async function itemIdsInCollection(supabase: RefsClient, collectionId: string): Promise<string[]> {
   const { data } = await supabase.from("item_collections").select("item_id").eq("collection_id", collectionId);
   return (data ?? []).map((r) => r.item_id);
 }

@@ -1,4 +1,4 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { RefsClient } from "@/lib/supabase/admin";
 import type { ItemImage } from "./types";
 
 // item_images guarda prints ADICIONAIS de um item (hero, pricing, footer do
@@ -6,7 +6,7 @@ import type { ItemImage } from "./types";
 // de merge à parte que collection_ids (ver lib/collections.ts): não dá pra
 // expressar num único select porque não é uma coluna de items.
 export async function attachImages<T extends { id: string }>(
-  supabase: SupabaseClient,
+  supabase: RefsClient,
   items: T[],
 ): Promise<(T & { images: ItemImage[] })[]> {
   if (items.length === 0) return [];
@@ -30,7 +30,7 @@ export async function attachImages<T extends { id: string }>(
 }
 
 export async function attachImagesToOne<T extends { id: string }>(
-  supabase: SupabaseClient,
+  supabase: RefsClient,
   item: T,
 ): Promise<T & { images: ItemImage[] }> {
   const [withImages] = await attachImages(supabase, [item]);
@@ -38,7 +38,7 @@ export async function attachImagesToOne<T extends { id: string }>(
 }
 
 export async function addItemImage(
-  supabase: SupabaseClient,
+  supabase: RefsClient,
   itemId: string,
   imagePath: string,
 ): Promise<ItemImage> {
